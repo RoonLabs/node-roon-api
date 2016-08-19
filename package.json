@@ -1,0 +1,11 @@
+{
+  "name": "node-roon-api",
+  "version": "0.0.1",
+  "description": "Roon Api Library",
+  "main": "lib.js",
+  "author": "Roon Labs, LLC",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "ws": "^1.1.1"
+  }
+}
