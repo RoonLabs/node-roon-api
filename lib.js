@@ -1,29 +1,65 @@
 "use strict";
 
-var WebSocket  = require('ws'),
-    fs         = require('fs'),
-    Moo        = require('./moo.js'),
-    MooMessage = require('./moomsg.js');
+// polyfill websockets in Node
+if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
-var Sood;
-if (typeof(window) == "undefined") Sood = require('./sood.js');
-
-function Core(moo, roon, registration) {
-    this.moo = moo;
-    this.core_id = registration.core_id;
-    this.display_name = registration.display_name;
-    this.display_version = registration.display_version;
-    this.services = {};
-
-    var svcs = {};
-    roon.extension_opts.required_services.forEach(svcobj => svcobj.services.forEach(svc => svcs[svc.name] = svcobj));
-    roon.extension_opts.optional_services.forEach(svcobj => svcobj.services.forEach(svc => svcs[svc.name] = svcobj));
-    registration.provided_services.forEach(e => { this.services[svcs[e].name] = new svcs[e](this); });
-};
+var Moo        = require('./moo.js'),
+    MooMessage = require('./moomsg.js'),
+    Core       = require('./core.js');
 
 function RoonApi() {
     this._service_request_handlers = {};
 };
+
+// - pull in Sood and provide discovery methods in Node
+//
+// - implement save_config/load_config based on:
+//      Node:       require('fs')
+//      WebBrowser: localStroage
+//
+var Sood;
+if (typeof(window) == "undefined") {
+    Sood = require('./sood.js');
+
+    RoonApi.prototype.start_discovery = function() {
+        if (this.connections) return;
+        this.connections = {};
+        Sood.listen(msg => {
+            if (msg.service_id == "ROON__XXX__BROKER") {
+                this.connections[host] = this.connect(host, () => { delete(this.connections[host]); });
+            }
+        });
+        Sood.query({ query_service_id: "ROON__XXX__BROKER" });
+    };
+
+    var fs = require('fs');
+    RoonApi.prototype.save_config = function(k, v) {
+        try {
+            let config;
+            try {
+                let content = fs.readFileSync("config.json", { encoding: 'utf8' });
+                config = JSON.parse(content);
+            } catch (e) {
+                config = {};
+            } 
+            config[k] = v;
+            fs.writeFileSync("config.json", JSON.stringify(config, null, '    '));
+        } catch (e) { }
+    };
+
+    RoonApi.prototype.load_config = function(k) {
+        try {
+            let content = fs.readFileSync("config.json", { encoding: 'utf8' });
+            return JSON.parse(content)[k];
+        } catch (e) {
+            return undefined;
+        }
+    };
+
+} else {
+    RoonApi.prototype.save_config = function(k, v) { localStorage.setItem(k, !v ? v : JSON.stringify(v)); };
+    RoonApi.prototype.load_config = function(k)    { let r = localStorage.getItem(k); return r ? JSON.parse(r) : undefined; };
+}
 
 RoonApi.prototype.register_service = function(svcname, spec) {
     let ret = {
@@ -73,29 +109,6 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     ret.send_continue_all = (subtype, name, props) => { for (let x in ret._subtypes[subtype]) ret._subtypes[subtype][x].send_continue(name, props); };
     ret.send_complete_all = (subtype, name, props) => { for (let x in ret._subtypes[subtype]) ret._subtypes[subtype][x].send_complete(name, props); };
     return ret;
-};
-
-RoonApi.prototype.save_config = function(k, v) {
-    try {
-	let config;
-	try {
-	    let content = fs.readFileSync("config.json", { encoding: 'utf8' });
-	    config = JSON.parse(content);
-	} catch (e) {
-	    config = {};
-	} 
-	config[k] = v;
-	fs.writeFileSync("config.json", JSON.stringify(config, null, '    '));
-    } catch (e) { }
-};
-
-RoonApi.prototype.load_config = function(k) {
-    try {
-	let content = fs.readFileSync("config.json", { encoding: 'utf8' });
-	return JSON.parse(content)[k];
-    } catch (e) {
-	return undefined;
-    }
 };
 
 RoonApi.prototype.extension = function(o) {
@@ -208,9 +221,13 @@ RoonApi.prototype.extension = function(o) {
 };
 
 RoonApi.prototype.connect = function(host, cb) {
-    var ret = { ws: new WebSocket('ws://' + host + '/api') };
+    var ret = {
+        ws: new WebSocket('ws://' + host + '/api')
+    };
+    if (typeof(window) != "undefined") ret.ws.binaryType = 'arraybuffer';
 
-    ret.ws.on('open', () => {
+    ret.ws.onopen = () => {
+//        console.log("OPEN");
         ret.moo = new Moo(ret.ws);
 
         ret.moo.send_request("com.roonlabs.registry:1/info",
@@ -240,27 +257,27 @@ RoonApi.prototype.connect = function(host, cb) {
 						  }
 					      });
 			 });
-    });
+    };
 
-    ret.ws.on('close', () => {
+    ret.ws.onclose = () => {
 //        console.log("CLOSE");
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
         cb && cb();
-    });
+    };
 
-    ret.ws.on('error', (e) => {
+    ret.ws.onerror = err => {
 //        console.log("ERROR", e);
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
         ret.ws.close();
         cb && cb();
-    });
+    };
 
-    ret.ws.on('message', (data, flags) => {
+    ret.ws.onmessage = event => {
 //        console.log("GOTMSG");
 	if (!ret.moo) return;
-        var msg = ret.moo.parse(data);
+        var msg = ret.moo.parse(event.data);
         var body = msg.body;
         delete(msg.body);
         if (msg.verb == "REQUEST") {
@@ -275,22 +292,9 @@ RoonApi.prototype.connect = function(host, cb) {
             console.log('<-', msg.verb, msg.request_id, msg.name, body || "");
             ret.moo.handle_response(msg, body);
         }
-    });
+    };
 
     return ret;
 };
-
-if (Sood) {
-    RoonApi.prototype.start_discovery = function() {
-        if (this.connections) return;
-        this.connections = {};
-        Sood.listen(msg => {
-            if (msg.service_id == "ROON__XXX__BROKER") {
-                this.connections[host] = this.connect(host, () => { delete(this.connections[host]); });
-            }
-        });
-        Sood.query({ query_service_id: "ROON__XXX__BROKER" });
-    };
-}
 
 exports = module.exports = RoonApi;
