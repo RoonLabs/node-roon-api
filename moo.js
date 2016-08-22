@@ -3,8 +3,27 @@
 function Moo(ws) {
     this.ws = ws;
     this.reqid = 0;
+    this.subkey = 0;
     this.requests = {};
 }
+
+Moo.prototype._subscribe_helper = function(svcname, reqname, cb) {
+    var self = this;
+    var subkey = self.subkey++;
+    self.send_request(svcname + "/subscribe_" + reqname,
+                            { subscription_key: subkey },
+                            function (msg, body) {
+                                if (cb)
+                                    cb(msg && msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), body);
+                            });
+    return {
+        unsubscribe: function(ucb) {
+            self.send_request(svcname + "/unsubscribe_" + reqname,
+                                { subscription_key: subkey },
+                                ucb);
+        }
+    }
+};
 
 Moo.prototype.send_request = function() {
     var name;
