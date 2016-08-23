@@ -41,7 +41,7 @@ MooMessage.prototype.send_continue = function() {
                   'Content-Type: ' + content_type + '\n';
     }
 
-    console.log('-> CONTINUE', this.msg.request_id, name, origbody || "");
+    console.log('-> CONTINUE', this.msg.request_id, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
         this.moo.ws.send(Buffer.concat([ m, body ], m.length + body.length), { binary: true, mask: true});
@@ -84,7 +84,7 @@ MooMessage.prototype.send_complete = function() {
                   'Content-Type: ' + content_type + '\n';
     }
 
-    console.log('-> COMPLETE', this.msg.request_id, name, origbody || "");
+    console.log('-> COMPLETE', this.msg.request_id, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
         this.moo.ws.send(Buffer.concat([ m, body ], m.length + body.length), { binary: true, mask: true});

@@ -72,22 +72,23 @@ RoonApi.prototype.register_service = function(svcname, spec) {
 	    let subname = s.subscribe_name;
 	    ret._subtypes[subname] = { };
 	    spec.methods[subname] = (req) => {
-		// XXX make sure req.body.subscription_id exists or respond send_complete with error
+		// XXX make sure req.body.subscription_key exists or respond send_complete with error
 
-		ret._subtypes[subname][req.body.subscription_id] = {
+		var newreq = {
 		    send_continue: function() {
 			req.send_continue.apply(req, arguments);
 		    },
 		    send_complete: function() {
 			req.send_complete.apply(req, arguments);
-			delete(ret._subtypes[subname][req.body.subscription_id]);
+			delete(ret._subtypes[subname][req.body.subscription_key]);
 		    }
 		};
-		s.start(ret._subtypes[subname][req.body.subscription_id], req);
+		s.start(newreq, req);
+		ret._subtypes[subname][req.body.subscription_key] = newreq;
 	    };
 	    spec.methods[s.unsubscribe_name] = (req) => {
-		// XXX make sure req.body.subscription_id exists or respond send_complete with error
-		delete(ret._subtypes[subname][req.body.subscription_id]);
+		// XXX make sure req.body.subscription_key exists or respond send_complete with error
+		delete(ret._subtypes[subname][req.body.subscription_key]);
 		if (s.end) s.end(req);
 		req.send_complete("Unsubscribed");
 	    };
@@ -281,7 +282,7 @@ RoonApi.prototype.connect = function(host, cb) {
         var body = msg.body;
         delete(msg.body);
         if (msg.verb == "REQUEST") {
-            console.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body || "");
+            console.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
             var req = new MooMessage(ret.moo, msg, body);
             var handler = this._service_request_handlers[msg.service];
             if (handler)
@@ -289,7 +290,7 @@ RoonApi.prototype.connect = function(host, cb) {
             else
                 req.send_complete("InvalidRequest", { error: "unknown service: " + msg.service });
         } else {
-            console.log('<-', msg.verb, msg.request_id, msg.name, body || "");
+            console.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
             ret.moo.handle_response(msg, body);
         }
     };

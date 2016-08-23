@@ -57,7 +57,7 @@ Moo.prototype.send_request = function() {
                   'Content-Type: ' + content_type + '\n';
     }
 
-    console.log('-> REQUEST', this.reqid, name, origbody || "");
+    console.log('-> REQUEST', this.reqid, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
         this.ws.send(Buffer.concat([ m, body ], m.length + body.length), { binary: true, mask: true});
