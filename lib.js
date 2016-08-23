@@ -17,19 +17,19 @@ function RoonApi() {
 //      Node:       require('fs')
 //      WebBrowser: localStroage
 //
-var Sood;
 if (typeof(window) == "undefined") {
-    Sood = require('./sood.js');
+    var sood = require('./sood.js');
 
     RoonApi.prototype.start_discovery = function() {
         if (this.connections) return;
         this.connections = {};
-        Sood.listen(msg => {
+        sood.on('message', msg => {
             if (msg.service_id == "ROON__XXX__BROKER") {
                 this.connections[host] = this.connect(host, () => { delete(this.connections[host]); });
             }
         });
-        Sood.query({ query_service_id: "ROON__XXX__BROKER" });
+        sood.query({ query_service_id: "ROON__XXX__BROKER" });
+        sood.start();
     };
 
     var fs = require('fs');
@@ -88,7 +88,7 @@ RoonApi.prototype.register_service = function(svcname, spec) {
 	    };
 	    spec.methods[s.unsubscribe_name] = (req) => {
 		// XXX make sure req.body.subscription_key exists or respond send_complete with error
-		delete(ret._subtypes[subname][req.body.subscription_key]);
+                delete(ret._subtypes[subname][req.body.subscription_key]);
 		if (s.end) s.end(req);
 		req.send_complete("Unsubscribed");
 	    };
@@ -98,12 +98,23 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     // process incoming requests from the other side
     this._service_request_handlers[svcname] = req => {
 	// make sure the req's request name is something we know about
-	let method = spec.methods[req.msg.name]; 
-	if (method) {
-	    method(req);
-	} else {
-	    req.send_complete("InvalidRequest", { error: "unknown request name (" + svcname + ") : " + req.msg.name });
-	}
+        if (req) {
+            let method = spec.methods[req.msg.name]; 
+            if (method) {
+                method(req);
+            } else {
+                req.send_complete("InvalidRequest", { error: "unknown request name (" + svcname + ") : " + req.msg.name });
+            }
+        } else {
+            if (spec.subscriptions) {
+                for (let x in spec.subscriptions) {
+                    let s = spec.subscriptions[x];
+                    let subname = s.subscribe_name;
+                    ret._subtypes[subname] = { };
+                    if (s.end) s.end(req);
+                }
+            }
+        }
     };
 
     ret.name = svcname;
@@ -269,6 +280,8 @@ RoonApi.prototype.connect = function(host, cb) {
 
     ret.ws.onerror = err => {
 //        console.log("ERROR", e);
+//
+        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null));
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
         ret.ws.close();
@@ -279,6 +292,7 @@ RoonApi.prototype.connect = function(host, cb) {
 //        console.log("GOTMSG");
 	if (!ret.moo) return;
         var msg = ret.moo.parse(event.data);
+        if (!msg) return;
         var body = msg.body;
         delete(msg.body);
         if (msg.verb == "REQUEST") {
