@@ -18,18 +18,19 @@ function RoonApi() {
 //      WebBrowser: localStroage
 //
 if (typeof(window) == "undefined") {
-    var sood = require('./sood.js');
-
     RoonApi.prototype.start_discovery = function() {
-        if (this.connections) return;
-        this.connections = {};
-        sood.on('message', msg => {
-            if (msg.service_id == "ROON__XXX__BROKER") {
-                this.connections[host] = this.connect(host, () => { delete(this.connections[host]); });
+	if (this._sood) return;
+	this._sood = require('./sood.js');
+        this._sood.on('message', msg => {
+//	    console.log(msg);
+            if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
+		let host = msg.from.ip;
+                this.connect(host, msg.props.http_port);
             }
         });
-        sood.query({ query_service_id: "ROON__XXX__BROKER" });
-        sood.start();
+        this._sood.start(() => {
+	    this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+	});
     };
 
     var fs = require('fs');
@@ -232,7 +233,14 @@ RoonApi.prototype.extension = function(o) {
     return this;
 };
 
-RoonApi.prototype.connect = function(host, cb) {
+RoonApi.prototype.connect = function() {
+    var host, cb;
+
+    var i = 0;
+    host = arguments[i++];
+    if (typeof(arguments[i]) != "function") host += ":" + arguments[i++];
+    cb = arguments[i++];
+
     var ret = {
         ws: new WebSocket('ws://' + host + '/api')
     };
