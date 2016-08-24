@@ -3,15 +3,16 @@
 var util    = require("util"),
     events  = require('events'),
     dgram   = require('dgram'),
-    network = require('network');
+    IP      = require('ip'),
+    os      = require('os');
 
-var SOOD_PORT = 9003;
+var SOOD_PORT         = 9003;
 var SOOD_MULTICAST_IP = "239.255.90.90";
 
 function Sood() {
     this._multicast = {};
     this._unicast = {};
-    this.on("message", (msg) => { console.log(JSON.stringify(msg)); });
+//    this.on("message", (msg) => { console.log(JSON.stringify(msg)); });
 };
 
 util.inherits(Sood, events.EventEmitter);
@@ -82,48 +83,50 @@ Sood.prototype.query = function(msg) {
 
     for (var ip in this._multicast) {
 	if (this._multicast[ip].send_sock) {
-	    console.log('sending on mcast ' + ip);
+//	    console.log('sending on mcast ' + ip);
 	    this._multicast[ip].send_sock.send(buf, 0, pos, SOOD_PORT, SOOD_MULTICAST_IP);
+//	    console.log('sending on mcast ' + ip + ", bcast " + this._multicast[ip].broadcast);
+	    this._multicast[ip].send_sock.send(buf, 0, pos, SOOD_PORT, this._multicast[ip].broadcast);
 	}
     }
     if (this._unicast.send_sock) {
-	console.log('sending on unicast');
+//	console.log('sending on unicast');
 	this._unicast.send_sock.send(buf, 0, pos, SOOD_PORT, SOOD_MULTICAST_IP);
     }
-
 };
-Sood.prototype.initsocket = function(cb) {
-    network.get_interfaces_list((err, list) => {
-	if (err) return;
-	//	    console.log(list);
-	list.forEach(e => {
-	    this._listen_iface(e.ip_address, e.name);
-	});
 
-	let unicast = this._unicast;
-	if (!unicast.send_sock) {
-	    //	    console.log(`SOOD: new sock: unicast`);
-	    unicast.send_sock = dgram.createSocket({ type: 'udp4' });
-	    unicast.send_sock.on('error', (err) => {
-		//		console.log(`server error ${ip}`, err);
-		unicast.send_sock.close();
-	    });
-	    unicast.send_sock.on('close', () => {
-		//		console.log(`closed unicast on ${ip}`);
-		delete(unicast.send_sock);
-	    });
-	    unicast.send_sock.on('message', (msg, rinfo) => {
-		msg = _parse(msg, rinfo);
-		if (msg) this.emit("message", msg);
-	    });
-	    unicast.send_sock.bind({ port: 0 }, () => {
-		unicast.send_sock.setBroadcast(true);
-		unicast.send_sock.setMulticastTTL(1);
-	    });
-	}
-	if (cb)
-	    setTimeout(cb, 200);
-    });
+Sood.prototype.initsocket = function(cb) {
+    let list = os.networkInterfaces();
+    for (var iface in list) {
+        list[iface].forEach(e => {
+            if (e.family == 'IPv4')
+                this._listen_iface(e.address, e.netmask, iface);
+        });
+    }
+
+    let unicast = this._unicast;
+    if (!unicast.send_sock) {
+        //	    console.log(`SOOD: new sock: unicast`);
+        unicast.send_sock = dgram.createSocket({ type: 'udp4' });
+        unicast.send_sock.on('error', (err) => {
+            //		console.log(`server error ${ip}`, err);
+            unicast.send_sock.close();
+        });
+        unicast.send_sock.on('close', () => {
+            //		console.log(`closed unicast on ${ip}`);
+            delete(unicast.send_sock);
+        });
+        unicast.send_sock.on('message', (msg, rinfo) => {
+            msg = _parse(msg, rinfo);
+            if (msg) this.emit("message", msg);
+        });
+        unicast.send_sock.bind({ port: 0 }, () => {
+            unicast.send_sock.setBroadcast(true);
+            unicast.send_sock.setMulticastTTL(1);
+        });
+    }
+
+    if (cb) setTimeout(cb, 200);
 };
 Sood.prototype.start = function(cb) {
     if (!this.interface_timer) this.interface_timer = setInterval(() => this.initsocket(), 5000);
@@ -139,7 +142,7 @@ Sood.prototype.stop = function() {
     try { this._unicast.send_sock.close(); } catch (e) { }
 }
 
-Sood.prototype._listen_iface = function(ip, ifacename) {
+Sood.prototype._listen_iface = function(ip, netmask, ifacename) {
     if (!ip) return;
 
     let iface = this._multicast[ip] = this._multicast[ip] || {};
@@ -167,12 +170,13 @@ Sood.prototype._listen_iface = function(ip, ifacename) {
     if (!iface.send_sock) {
 //	console.log(`SOOD: new sock: send ${ip}/${ifacename}`);
 	iface.send_sock = dgram.createSocket({ type: 'udp4' });
+        iface.broadcast = IP.subnet(ip, netmask).broadcastAddress;
 	iface.send_sock.on('error', (err) => {
-	    console.log(`server error ${ip}`, err);
+//	    console.log(`server error ${ip}`, err);
 	    iface.send_sock.close();
 	});
 	iface.send_sock.on('close', () => {
-	    console.log(`closed multicast on ${ip}`);
+//	    console.log(`closed multicast on ${ip}`);
 	    delete(iface.send_sock);
 	});
 	iface.send_sock.on('message', (msg, rinfo) => {

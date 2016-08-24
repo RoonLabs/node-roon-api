@@ -3,7 +3,8 @@
 // polyfill websockets in Node
 if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
-var Moo        = require('./moo.js'),
+var uuid       = require('node-uuid'),
+    Moo        = require('./moo.js'),
     MooMessage = require('./moomsg.js'),
     Core       = require('./core.js');
 
@@ -29,7 +30,7 @@ if (typeof(window) == "undefined") {
             }
         });
         this._sood.start(() => {
-	    this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+	    this._sood.query({ '_tid':uuid.v4(), query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
 	});
     };
 
