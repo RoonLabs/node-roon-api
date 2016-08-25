@@ -154,7 +154,7 @@ RoonApi.prototype.extension = function(o) {
 	    }
 	}) ]
     };
-    // XXX    o.provided_services.push(pinger);
+    o.provided_services.push(pinger);
 
     if (o.core_found && !o.core_lost) throw new Error("Roon Extension options .core_lost is required if you implement .core_found.");
     if (!o.core_found && o.core_lost) throw new Error("Roon Extension options .core_found is required if you implement .core_lost.");
