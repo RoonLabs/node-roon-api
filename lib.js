@@ -44,7 +44,10 @@ if (typeof(window) == "undefined") {
             } catch (e) {
                 config = {};
             } 
-            config[k] = v;
+            if (v === undefined || v === null)
+                delete(config[k]);
+            else
+                config[k] = v;
             fs.writeFileSync("config.json", JSON.stringify(config, null, '    '));
         } catch (e) { }
     };
@@ -59,8 +62,20 @@ if (typeof(window) == "undefined") {
     };
 
 } else {
-    RoonApi.prototype.save_config = function(k, v) { localStorage.setItem(k, !v ? v : JSON.stringify(v)); };
-    RoonApi.prototype.load_config = function(k)    { let r = localStorage.getItem(k); return r ? JSON.parse(r) : undefined; };
+    RoonApi.prototype.save_config = function(k, v) {
+        if (v === undefined || v === null)
+            localStorage.removeItem(k);
+        else
+            localStorage.setItem(k, JSON.stringify(v));
+    };
+    RoonApi.prototype.load_config = function(k) {
+        try {
+            let r = localStorage.getItem(k);
+            return r ? JSON.parse(r) : undefined;
+        } catch (e) {
+            return undefined;
+        }
+    };
 }
 
 RoonApi.prototype.register_service = function(svcname, spec) {
@@ -282,19 +297,18 @@ RoonApi.prototype.connect = function() {
 
     ret.ws.onclose = () => {
 //        console.log("CLOSE");
-	if (ret.moo) ret.moo.close();
-	ret.moo = undefined;
-        cb && cb();
-    };
-
-    ret.ws.onerror = err => {
-//        console.log("ERROR", e);
-//
         Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null));
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
         ret.ws.close();
         cb && cb();
+    };
+
+    ret.ws.onerror = err => {
+//        console.log("ERROR", err);
+	if (ret.moo) ret.moo.close();
+	ret.moo = undefined;
+        ret.ws.close();
     };
 
     ret.ws.onmessage = event => {
