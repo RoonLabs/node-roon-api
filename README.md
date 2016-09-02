@@ -1,7 +1,11 @@
-# Roon API for [Node.js](https://nodejs.org/): An overview and tutorial
+# Roon API for Javascript: An overview and tutorial
 ------------
 
 ## Getting started
+
+1. This Roon API for Javascript is called `node-roon-api`, because it has
+complete functionality in the [Node.js](https://nodejs.org/) environment, but
+it also works in a [web browser](#using-roon-api-in-a-web-browser).
 
 1. Install Node.js from https://nodejs.org/.
 
@@ -95,32 +99,6 @@ Your extension can be connected to multiple Roon Cores at once, but if your
 extension really wants to be connected to only 1 Roon Core, then you should
 using the [pairing](#pairing) functionality.
 
-## Pairing
-
-Pairing allows all Roon Cores on the network to show the extension in the
-Settings, but only allow one Roon Core to be "active" when speaking to this
-extension. This is needed when you are building an extension that is really
-meant to control a single Roon Core.
-
-For example, the [Roon extension for the Griffin Powermate USB
-knob](http://github.com/roonlabs/roon-extension-powermate) is an extension that
-modifies the volume of a zone when a USB knob is rotated. If you ran this
-extension on a network with multiple Roon Cores, it wouldn't know which Roon
-Core to control.
-
-With pairing, initial authorization of the extension will automatically pair
-that Roon Core with this extension. Future connections to the same Roon Core
-will auto-pair. If you then click 'Enable' on a second Roon core, the pairing
-will change to the second Roon Core and the knob will begin to control it
-instead. If you then look at the first Roon Core, the authorization still
-exists, but instead of seeing an "Enable" button, the user will see a "Pair"
-button, which will move the pairing back to the first Roon Core.
-
-This system, on a network with 1 Roon Core is very simple and completely
-transparent. But on a network with multiple Roon Cores, it provides a mechanism
-that is easy to activate, while relieving the extension author of the
-responsibility of having to create a user interface to select a Roon Core.
-
 ## Services
 
 Roon extensions can _use_ and/or _provide_ **services**. This works a bit
@@ -196,8 +174,35 @@ two services in your extension can allow you to enable this functionality to
 Roon via Serial/RS232, Infrared, netowrk, or some other mechanism, without
 hardware Roon support.
 
+## Pairing
 
-### Providing a service
+Most extensions that use services will want to communicate with one Roon Core
+at a time.
+
+Pairing works by allowing all Roon Cores on the network to show the extension
+in the Settings, but only one Roon Core can be "paired" to the extension.
+
+For example, the [Roon extension for the Griffin Powermate USB
+knob](http://github.com/roonlabs/roon-extension-powermate) is an extension that
+modifies the volume of a zone when a USB knob is rotated. If you ran this
+extension on a network with multiple Roon Cores, it wouldn't know which Roon
+Core to control.
+
+With pairing, initial authorization of the extension will automatically pair
+that Roon Core with this extension. Future connections to the same Roon Core
+will auto-pair. If you then click 'Enable' on a second Roon core, the pairing
+will change to the second Roon Core and the knob will begin to control it
+instead. If you then look at the first Roon Core, the authorization still
+exists, but instead of seeing an "Enable" button, the user will see a "Pair"
+button, which will move the pairing back to the first Roon Core.
+
+On a network with 1 Roon Core, this pairing mechanism is very simple and
+completely transparent to the user. But on a network with multiple Roon Cores,
+it provides a mechanism that is easy to use, while relieving the extension
+author of the responsibility of having to create a user interface to select a
+Roon Core.
+
+## Providing a service
 
 1. Let's make our test extension report a status to Roon.
 
@@ -242,7 +247,7 @@ know of the new status. The second argument is true if the status is an error,
 and false if it is neutral or good.
 
 
-### Using a service
+## Using a service
 
 1. Let's make our test extension list all the zones.
 
@@ -333,4 +338,4 @@ shown by Roon.
 **Normally, you don't want to use `core_found` and `core_lost`, and
 instead you want to use Roon API's [pairing](#pairing) functionality.**
 
-
+## Using Roon API in a Web Browser
