@@ -1,4 +1,4 @@
-# Roon API for [Node.js](https://nodejs.org/)
+# Roon API for [Node.js](https://nodejs.org/): An overview and tutorial
 ------------
 
 ## Getting started
@@ -95,6 +95,31 @@ Your extension can be connected to multiple Roon Cores at once, but if your
 extension really wants to be connected to only 1 Roon Core, then you should
 using the [pairing](#pairing) functionality.
 
+## Pairing
+
+Pairing allows all Roon Cores on the network to show the extension in the
+Settings, but only allow one Roon Core to be "active" when speaking to this
+extension. This is needed when you are building an extension that is really
+meant to control a single Roon Core.
+
+For example, the [Roon extension for the Griffin Powermate USB
+knob](http://github.com/roonlabs/roon-extension-powermate) is an extension that
+modifies the volume of a zone when a USB knob is rotated. If you ran this
+extension on a network with multiple Roon Cores, it wouldn't know which Roon
+Core to control.
+
+With pairing, initial authorization of the extension will automatically pair
+that Roon Core with this extension. Future connections to the same Roon Core
+will auto-pair. If you then click 'Enable' on a second Roon core, the pairing
+will change to the second Roon Core and the knob will begin to control it
+instead. If you then look at the first Roon Core, the authorization still
+exists, but instead of seeing an "Enable" button, the user will see a "Pair"
+button, which will move the pairing back to the first Roon Core.
+
+This system, on a network with 1 Roon Core is very simple and completely
+transparent. But on a network with multiple Roon Cores, it provides a mechanism
+that is easy to activate, while relieving the extension author of the
+responsibility of having to create a user interface to select a Roon Core.
 
 ## Services
 
@@ -189,7 +214,7 @@ hardware Roon support.
 
    ```javascript
    var RoonApi       = require("node-roon-api"),
-       RoonApiStatus = require('node-roon-api-status');
+       RoonApiStatus = require("node-roon-api-status");
 
    var roon       = new RoonApi();
    var svc_status = new RoonApiStatus(roon);
@@ -235,8 +260,8 @@ and false if it is neutral or good.
 
    ```javascript
    var RoonApi          = require("node-roon-api"),
-       RoonApiStatus    = require('node-roon-api-status'),
-       RoonApiTransport = require('node-roon-api-transport');
+       RoonApiStatus    = require("node-roon-api-status"),
+       RoonApiTransport = require("node-roon-api-transport");
 
    var roon       = new RoonApi();
    var svc_status = new RoonApiStatus(roon);
@@ -251,7 +276,7 @@ and false if it is neutral or good.
        required_services:   [ RoonApiTransport ],
        provided_services:   [ svc_status ],
 
-       core_found: function(core) {
+       core_paired: function(core) {
            let transport = core.services.RoonApiTransport;
            transport.subscribe_zones(function(cmd, data) {
                                          console.log(core.core_id,
@@ -263,7 +288,7 @@ and false if it is neutral or good.
                                      });
        },
 
-       core_lost: function(core) {
+       core_unpaired: function(core) {
                       console.log(core.core_id,
                               core.display_name,
                               core.display_version,
@@ -278,11 +303,8 @@ and false if it is neutral or good.
    ```
 
 2. The extension registration using the `RoonApi::extension()` can be passed
-`core_found` and `core_lost` members to be notified when Roon Cores are
-connected (post-authorization) or disconnected.
-
-    **Normally, you don't want to use `core_found` and `core_lost`, and
-instead you want to use Roon API's [pairing](#pairing) functionality.**
+`core_paired` and `core_unpaired` members to be notified when Roon Cores are
+paired or unpaired.
 
     When you get a hold of a core, you can use the
 [transport service's](http://github.com/roonlabs/node-roon-api-transport)
@@ -293,42 +315,22 @@ the subscription messages sent to us from the Roon Core. This should print a
 list of zones at subscription time, and any modification to the zones listing
 that happen while we are connected.
 
-## Pairing
+## Working with multiple Roon Cores
 
-In the above examples, the extension provided the `core_found` function to get
-access to the Roon Cores that were discovered.
+In the above examples, the extension provided the `core_paired` function to get
+access to the Roon Cores that it was paired with.
 
-When you provide `core_found` and `core_lost`, you are notified of all cores
-discovered (after the extension is authorized or auto-authorized).
+When you provide `core_paired` and `core_unpaired`, you are notified only of
+the Roon Core you are paired with.
 
-**This might be what you want in some cases, but in most cases, you will want to
-provide the `core_paired` function instead of `core_found`.**
+If you want to be notified of all the Roon Cores, and disable the pairing
+functionality, you can provide `core_found` and `core_lost` instead.
 
-By providing `core_paired` instead of `core_found`, you are requesting Roon
-Core pairing.
+Those functions will be called with every Roon Core discovered (after the
+extension is authorized or auto-authorized), and no "Pair" button will ever be
+shown by Roon.
 
-Pairing allows all Roon Cores on the network to show the extension in the
-Settings, but only allow one Roon Core to be "active" when speaking to this
-extension. This is needed when you are building an extension that is really
-meant to control a single Roon Core.
-
-For example, the [Roon extension for the Griffin Powermate USB
-knob](http://github.com/roonlabs/roon-extension-powermate) is an extension that
-modifies the volume of a zone when a USB knob is rotated. If you ran this
-extension on a network with multiple Roon Cores, it wouldn't know which Roon
-Core to control.
-
-With pairing, initial authorization of the extension will automatically pair
-that Roon Core with this extension. Future connections to the same Roon Core
-will auto-pair. If you then click 'Enable' on a second Roon core, the pairing
-will change to the second Roon Core and the knob will begin to control it
-instead. If you then look at the first Roon Core, the authorization still
-exists, but instead of seeing an "Enable" button, the user will see a "Pair"
-button, which will move the pairing back to the first Roon Core.
-
-This system, on a network with 1 Roon Core is very simple and completely
-transparent. But on a network with multiple Roon Cores, it provides a mechanism
-that is easy to activate, while relieving the extension author of the
-responsibility of having to create a user interface to select a Roon Core.
+**Normally, you don't want to use `core_found` and `core_lost`, and
+instead you want to use Roon API's [pairing](#pairing) functionality.**
 
 
