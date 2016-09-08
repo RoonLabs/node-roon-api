@@ -49,9 +49,7 @@ it also works in a [web browser](#using-roon-api-in-a-web-browser).
     ```javascript
     var RoonApi = require("node-roon-api");
 
-    var roon = new RoonApi();
-
-    roon.extension({
+    var roon = new RoonApi({
         extension_id:        'com.elvis.test',
         display_name:        "Elvis's First Roon API Test",
         display_version:     "1.0.0",
@@ -74,8 +72,8 @@ it also works in a [web browser](#using-roon-api-in-a-web-browser).
 
 ## Connecting to a Roon Core
 
-The extension must declare it's own information using the `RoonApi::extension()`
-method.  When your extension connects to Roon, it will register itself with
+The extension must declare it's own information using the `RoonApi`
+constructor. When your extension connects to Roon, it will register itself with
 this information.
 
 Roon extensions are meant to discover Roon Cores, to avoid having to have the
@@ -171,7 +169,7 @@ inputs, and support standby functionality in-app.
 
     However, if you have a device that is not Roon Ready, then providing these
 two services in your extension can allow you to enable this functionality to
-Roon via Serial/RS232, Infrared, netowrk, or some other mechanism, without
+Roon via Serial/RS232, Infrared, network, or some other mechanism, without
 hardware Roon support.
 
 ## Pairing
@@ -221,10 +219,7 @@ Roon Core.
    var RoonApi       = require("node-roon-api"),
        RoonApiStatus = require("node-roon-api-status");
 
-   var roon       = new RoonApi();
-   var svc_status = new RoonApiStatus(roon);
-
-   roon.extension({
+   var roon       = new RoonApi({
        extension_id:        'com.elvis.test',
        display_name:        "Elvis's First Roon API Test",
        display_version:     "1.0.0",
@@ -233,6 +228,7 @@ Roon Core.
        website:             'https://github.com/elvispresley/roon-extension-test'
        provided_services:   [ svc_status ]
    });
+   var svc_status = new RoonApiStatus(roon);
 
    svc_status.set_status("All is good", false);
 
@@ -268,10 +264,7 @@ and false if it is neutral or good.
        RoonApiStatus    = require("node-roon-api-status"),
        RoonApiTransport = require("node-roon-api-transport");
 
-   var roon       = new RoonApi();
-   var svc_status = new RoonApiStatus(roon);
-
-   roon.extension({
+   var roon = new RoonApi({
        extension_id:        'com.elvis.test',
        display_name:        "Elvis's First Roon API Test",
        display_version:     "1.0.0",
@@ -302,12 +295,13 @@ and false if it is neutral or good.
                   }
    });
 
+   var svc_status = new RoonApiStatus(roon);
    svc_status.set_status("All is good", false);
 
    roon.start_discovery();
    ```
 
-2. The extension registration using the `RoonApi::extension()` can be passed
+2. The extension registration using the `RoonApi` constructor can be passed
 `core_paired` and `core_unpaired` members to be notified when Roon Cores are
 paired or unpaired.
 
@@ -339,3 +333,24 @@ shown by Roon.
 instead you want to use Roon API's [pairing](#pairing) functionality.**
 
 ## Using Roon API in a Web Browser
+
+The Roon API for Javascript uses web browser friendly networking to speak to
+Roon, so the API works inside a web browser like Chrome, Safari, IE, and
+FireFox.
+
+The big exception in functionality is discovery. Roon's discovery protocol uses
+UDP networking packets, and the web browsers don't have access to that. To get
+around this, instead of using `RoonApi:start_discovery()`, you can use
+`RoonApi::connect(host, [port], [close_cb])`. You will have to pass the IP
+address or hostname of your Roon Core to this method, and optionally you can
+pass port number and/or a callback to call upon disconnection (for retrying the
+connection). Unfortunately, this means your web app will probably need an input
+for the IP address of the Roon Core.
+
+The best way to use this API is to use [browserify](http://browserify.org/) +
+[partialify](https://github.com/bclinkinbeard/partialify) to combine your
+html/js/css and the entire Roon API into 1 large `bundle.js` file.
+
+For an example, see the [web test
+app](http://github.com/roonlabs/roon-extension-web-testapp).
+
