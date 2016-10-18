@@ -219,7 +219,7 @@ Roon Core.
    var RoonApi       = require("node-roon-api"),
        RoonApiStatus = require("node-roon-api-status");
 
-   var roon       = new RoonApi({
+   var roon = new RoonApi({
        extension_id:        'com.elvis.test',
        display_name:        "Elvis's First Roon API Test",
        display_version:     "1.0.0",
@@ -231,7 +231,7 @@ Roon Core.
    var svc_status = new RoonApiStatus(roon);
 
    roon.init_services({
-       provided_services:   [ svc_status ]
+       provided_services: [ svc_status ]
    });
 
    svc_status.set_status("All is good", false);
@@ -239,8 +239,10 @@ Roon Core.
    roon.start_discovery();
    ```
 
-2. The `provided_services` field when registering your extension let's Roon
-know you have are providing services.
+2. The `provided_services` field when calling the `RoonApi::init_services()`
+let's Roon know you have are providing service. Above, we pass an instance of
+`RoonApiStatus`, which enables Roon to show a status message below the extension
+information in Roon Settings. 
 
 The `RoonApiStatus::set_status()` method notifies the connected Roon Cores
 know of the new status. The second argument is true if the status is an error,
@@ -274,9 +276,7 @@ and false if it is neutral or good.
        display_version:     "1.0.0",
        publisher:           'Elvis Presley',
        email:               'elvis@presley.com',
-       website:             'https://github.com/elvispresley/roon-extension-test'
-       required_services:   [ RoonApiTransport ],
-       provided_services:   [ svc_status ],
+       website:             'https://github.com/elvispresley/roon-extension-test',
 
        core_paired: function(core) {
            let transport = core.services.RoonApiTransport;
@@ -300,21 +300,32 @@ and false if it is neutral or good.
    });
 
    var svc_status = new RoonApiStatus(roon);
+
+   roon.init_services({
+       required_services: [ RoonApiTransport ],
+       provided_services: [ svc_status ],
+   });
+
    svc_status.set_status("All is good", false);
 
    roon.start_discovery();
    ```
 
-2. The extension registration using the `RoonApi` constructor can be passed
-`core_paired` and `core_unpaired` members to be notified when Roon Cores are
-paired or unpaired.
+2. In addition to providing the
+   [status](http://github.com/roonlabs/node-roon-api-status) service, we also
+   specify here that we require the
+   [transport](http://github.com/roonlabs/node-roon-api-transport) service.
 
-    When you get a hold of a core, you can use the
+   Additionally, you see above that the `RoonApi` constructor can be passed
+   `core_paired` and `core_unpaired` members, which will be called when Roon
+   Cores are paired or unpaired.
+
+   When you get a hold of a core, you can use the
 [transport service's](http://github.com/roonlabs/node-roon-api-transport)
 functionality via `core.services.RoonApiTransport`.
 
-    In this example, we've just subscribed to the zone listing and print
-the subscription messages sent to us from the Roon Core. This should print a
+    In this example, we subscribe to the zone listing and print
+the subscription messages sent to us from the Roon Core. This will print a
 list of zones at subscription time, and any modification to the zones listing
 that happen while we are connected.
 
