@@ -15,7 +15,13 @@ it also works in a [web browser](#using-roon-api-in-a-web-browser).
 
    Make sure you are running node 5.x or higher.
    ```sh
-   % node -v
+   node -v
+   ```
+
+   For example:
+
+   ```sh
+   $ node -v
    v5.10.1
    ```
 
@@ -213,7 +219,13 @@ Roon Core.
    }
    ```
 
-   and let's modify the app.js to provide the **status service**.
+   and be sure to install the module:
+
+   ```sh
+   npm install
+   ```
+
+   Let's modify the app.js to provide the **status service**.
 
    ```javascript
    var RoonApi       = require("node-roon-api"),
@@ -257,13 +269,18 @@ and false if it is neutral or good.
 
    ```javascript
    "dependencies": {
-       "node-roon-api":           "github: roonlabs/node-roon-api",
-       "node-roon-api-status":    "github: roonlabs/node-roon-api-status",
-       "node-roon-api-transport": "github: roonlabs/node-roon-api-transport"
+       "node-roon-api":           "github:roonlabs/node-roon-api",
+       "node-roon-api-status":    "github:roonlabs/node-roon-api-status",
+       "node-roon-api-transport": "github:roonlabs/node-roon-api-transport"
    }
    ```
+   and be sure to install the module:
 
-   and let's modify the app.js to use the **transport service**.
+   ```sh
+   npm install
+   ```
+
+   Let's modify the app.js to use the **transport service**.
 
    ```javascript
    var RoonApi          = require("node-roon-api"),
