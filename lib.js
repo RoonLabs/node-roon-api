@@ -39,8 +39,6 @@ function RoonApi(o) {
     if (o.core_paired   && typeof(o.core_paired)   != "function") throw new Error("Roon Extensions options has a .core_paired which is not a function");
     if (o.core_unpaired && typeof(o.core_unpaired) != "function") throw new Error("Roon Extensions options has a .core_unpaired which is not a function");
 
-    this.extension_opts = o;
-
     this.extension_reginfo = {
         extension_id:      o.extension_id,
         display_name:      o.display_name,
@@ -52,6 +50,8 @@ function RoonApi(o) {
         provided_services: []
     };
     if (o.website) this.extension_reginfo.website = o.website;
+
+    this.extension_opts = o;
 }
 
 RoonApi.prototype.init_services = function(o) {
@@ -107,19 +107,18 @@ RoonApi.prototype.init_services = function(o) {
 	o.provided_services.push(this.pairing_service_1);
     }
 
-    this.extension_reginfo.provided_services.push({
-	this.register_service("com.roonlabs.ping:1", {
-	    methods: {
-		ping: function(req) {
-		    req.send_complete("Success");
-		},
-	    }
-	})
-    });
-
+    o.provided_services.push({ services: [ this.register_service("com.roonlabs.ping:1", {
+                                                        methods: {
+                                                            ping: function(req) {
+                                                                req.send_complete("Success");
+                                                            },
+                                                        }
+                                                    })]})
     o.required_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.required_services.push(svc.name); }); });
     o.optional_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.optional_services.push(svc.name); }); });
     o.provided_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.provided_services.push(svc.name); }); });
+
+    this.services_opts = o;
 };
 
 // - pull in Sood and provide discovery methods in Node, but not in WebBrowser
