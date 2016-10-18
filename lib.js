@@ -108,13 +108,13 @@ RoonApi.prototype.init_services = function(o) {
     }
 
     this.extension_reginfo.provided_services.push({
-	services: [ this.register_service("com.roonlabs.ping:1", {
+	this.register_service("com.roonlabs.ping:1", {
 	    methods: {
 		ping: function(req) {
 		    req.send_complete("Success");
 		},
 	    }
-	}) ]
+	})
     });
 
     o.required_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.required_services.push(svc.name); }); });
