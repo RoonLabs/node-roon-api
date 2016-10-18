@@ -16,9 +16,6 @@ function RoonApi(o) {
     if (typeof(o.display_version) != 'string') throw new Error("Roon Extension options is missing the required 'display_version' property.");
     if (typeof(o.publisher)       != 'string') throw new Error("Roon Extension options is missing the required 'publisher' property.");
     if (typeof(o.email)           != 'string') throw new Error("Roon Extension options is missing the required 'email' property.");
-    if (!Array.isArray(o.required_services)) o.required_services = []; 
-    if (!Array.isArray(o.optional_services)) o.optional_services = [];
-    if (!Array.isArray(o.provided_services)) o.provided_services = [];
 
     if (typeof(o.set_persisted_state) == 'undefined')
         this.set_persisted_state = state => { this.save_config("roonstate", state); };
@@ -29,17 +26,6 @@ function RoonApi(o) {
         this.get_persisted_state = () => { return this.load_config("roonstate") || {}; };
     else
         this.get_persisted_state = o.get_persisted_state;
-
-    let pinger = {
-	services: [ this.register_service("com.roonlabs.ping:1", {
-	    methods: {
-		ping: function(req) {
-		    req.send_complete("Success");
-		},
-	    }
-	}) ]
-    };
-    o.provided_services.push(pinger);
 
     if (o.core_found && !o.core_lost) throw new Error("Roon Extension options .core_lost is required if you implement .core_found.");
     if (!o.core_found && o.core_lost) throw new Error("Roon Extension options .core_found is required if you implement .core_lost.");
@@ -56,7 +42,27 @@ function RoonApi(o) {
     if (o.core_paired   && typeof(o.core_paired)   != "function") throw new Error("Roon Extensions options has a .core_paired which is not a function");
     if (o.core_unpaired && typeof(o.core_unpaired) != "function") throw new Error("Roon Extensions options has a .core_unpaired which is not a function");
 
-    if (o.core_paired) {
+    this.extension_opts = o;
+
+    this.extension_reginfo = {
+        extension_id:      o.extension_id,
+        display_name:      o.display_name,
+        display_version:   o.display_version,
+        publisher:         o.publisher,
+        email:             o.email
+        required_services: [],
+        optional_services: [],
+        provided_services: []
+    };
+    if (o.website) this.extension_reginfo.website = o.website;
+}
+
+RoonApi.prototype.init_services = function(o) {
+    if (!Array.isArray(o.required_services)) o.required_services = []; 
+    if (!Array.isArray(o.optional_services)) o.optional_services = [];
+    if (!Array.isArray(o.provided_services)) o.provided_services = [];
+
+    if (this.extension_opts.core_paired) {
 	let svc = this.register_service("com.roonlabs.pairing:1", {
 	    subscriptions: [
 	    {
@@ -101,24 +107,22 @@ function RoonApi(o) {
 	o.provided_services.push(this.pairing_service_1);
     }
 
-    this.extension_opts = o;
+    this.extension_reginfo.provided_services.push({
+	services: [ this.register_service("com.roonlabs.ping:1", {
+	    methods: {
+		ping: function(req) {
+		    req.send_complete("Success");
+		},
+	    }
+	}) ]
+    });
 
-    this.extension_reginfo = {
-        extension_id:      o.extension_id,
-        display_name:      o.display_name,
-        display_version:   o.display_version,
-        publisher:         o.publisher,
-        email:             o.email
-    };
-
-    this.extension_reginfo.required_services = []; o.required_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.required_services.push(svc.name); }); });
-    this.extension_reginfo.optional_services = []; o.optional_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.optional_services.push(svc.name); }); });
-    this.extension_reginfo.provided_services = []; o.provided_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.provided_services.push(svc.name); }); });
-
-    if (o.website) this.extension_reginfo.website = o.website;
+    o.required_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.required_services.push(svc.name); }); });
+    o.optional_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.optional_services.push(svc.name); }); });
+    o.provided_services.forEach(svcobj => { svcobj.services.forEach(svc => { this.extension_reginfo.provided_services.push(svc.name); }); });
 };
 
-// - pull in Sood and provide discovery methods in Node
+// - pull in Sood and provide discovery methods in Node, but not in WebBrowser
 //
 // - implement save_config/load_config based on:
 //      Node:       require('fs')
