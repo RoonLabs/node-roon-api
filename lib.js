@@ -49,7 +49,7 @@ function RoonApi(o) {
         display_name:      o.display_name,
         display_version:   o.display_version,
         publisher:         o.publisher,
-        email:             o.email
+        email:             o.email,
         required_services: [],
         optional_services: [],
         provided_services: []

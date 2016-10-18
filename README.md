@@ -225,10 +225,14 @@ Roon Core.
        display_version:     "1.0.0",
        publisher:           'Elvis Presley',
        email:               'elvis@presley.com',
-       website:             'https://github.com/elvispresley/roon-extension-test'
+       website:             'https://github.com/elvispresley/roon-extension-test',
+   });
+
+   var svc_status = new RoonApiStatus(roon);
+
+   roon.init_services({
        provided_services:   [ svc_status ]
    });
-   var svc_status = new RoonApiStatus(roon);
 
    svc_status.set_status("All is good", false);
 
