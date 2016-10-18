@@ -34,9 +34,6 @@ function RoonApi(o) {
 
     if (o.core_paired && o.core_found) throw new Error("Roon Extension options can not specify both .core_paired and .core_found.");
 
-    if (o.required_services.length || o.optional_services.length)
-	if (!o.core_paired && !o.core_found) throw new Error("Roon Extensions options has required or optional services, but is neither .core_paired nor .core_found.");
-
     if (o.core_found    && typeof(o.core_found)    != "function") throw new Error("Roon Extensions options has a .core_found which is not a function");
     if (o.core_lost     && typeof(o.core_lost)     != "function") throw new Error("Roon Extensions options has a .core_lost which is not a function");
     if (o.core_paired   && typeof(o.core_paired)   != "function") throw new Error("Roon Extensions options has a .core_paired which is not a function");
@@ -61,6 +58,9 @@ RoonApi.prototype.init_services = function(o) {
     if (!Array.isArray(o.required_services)) o.required_services = []; 
     if (!Array.isArray(o.optional_services)) o.optional_services = [];
     if (!Array.isArray(o.provided_services)) o.provided_services = [];
+
+    if (o.required_services.length || o.optional_services.length)
+	if (!this.extension_opts.core_paired && !this.extension_opts.core_found) throw new Error("Roon Extensions options has required or optional services, but has neither .core_paired nor .core_found.");
 
     if (this.extension_opts.core_paired) {
 	let svc = this.register_service("com.roonlabs.pairing:1", {
