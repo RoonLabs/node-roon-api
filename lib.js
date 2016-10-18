@@ -131,11 +131,15 @@ if (typeof(window) == "undefined") {
     RoonApi.prototype.start_discovery = function() {
 	if (this._sood) return;
 	this._sood = require('./sood.js');
+        this._sood_conns = {};
         this._sood.on('message', msg => {
 //	    console.log(msg);
             if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
-		let host = msg.from.ip;
-                this.connect(host, msg.props.http_port);
+                if (this._sood_conns[msg.props.unique_id]) return;
+                this._sood_conns[msg.props.unique_id] = true;
+                this.connect(msg.from.ip, msg.props.http_port, () => {
+                    delete(this._sood_conns[msg.props.unique_id]);
+                });
             }
         });
         this._sood.start(() => {
