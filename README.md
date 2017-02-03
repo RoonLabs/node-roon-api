@@ -63,6 +63,8 @@ it also works in a [web browser](#using-roon-api-in-a-web-browser).
         email:               'elvis@presley.com',
         website:             'https://github.com/elvispresley/roon-extension-test'
     });
+    
+    roon.init_services({});
 
     roon.start_discovery();
     ```
