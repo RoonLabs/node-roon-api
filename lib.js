@@ -127,7 +127,7 @@ RoonApi.prototype.init_services = function(o) {
 //      Node:       require('fs')
 //      WebBrowser: localStroage
 //
-if (typeof(window) == "undefined") {
+if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
     RoonApi.prototype.start_discovery = function() {
 	if (this._sood) return;
 	this._sood = require('./sood.js');
