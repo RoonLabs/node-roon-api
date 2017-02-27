@@ -1,5 +1,36 @@
 "use strict";
 
+/**
+ * Roon API.
+ * @class RoonApi
+ * @param {object} desc - Information about your extension. Used by Roon to display to the end user what is trying to access Roon.
+ * @param {string} desc.extension_id - A unique ID for this extension. Something like @com.your_company_or_name.name_of_extension@.
+ * @param {string} desc.display_name - The name of your extension.
+ * @param {string} desc.display_version - A version string that is displayed to the user for this extension. Can be anything you want.
+ * @param {string} desc.publisher - The name of the developer of the extension.
+ * @param {string} desc.website - Website for more information about the extension.
+ * @param {RoonApi~core_paired} [desc.core_paired] - Called when Roon pairs you.
+ * @param {RoonApi~core_unpaired} [desc.core_unpaired] - Called when Roon unpairs you.
+ * @param {RoonApi~core_found} [desc.core_found] - Called when a Roon Core is found. Usually, you want to implement pairing instead of using this.
+ * @param {RoonApi~core_lost} [desc.core_lost] - Called when Roon Core is lost. Usually, you want to implement pairing instead of using this.
+ */
+/**
+ * @callback RoonApi~core_paired
+ * @param {Core} core
+ */
+/**
+ * @callback RoonApi~core_unpaired
+ * @param {Core} core
+ */
+/**
+ * @callback RoonApi~core_found
+ * @param {Core} core
+ */
+/**
+ * @callback RoonApi~core_lost
+ * @param {Core} core
+ */
+
 // polyfill websockets in Node
 if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
@@ -54,6 +85,15 @@ function RoonApi(o) {
     this.extension_opts = o;
 }
 
+ /**
+ * Initializes the services you require and that you provide.
+ *
+ * @this RoonApi
+ * @param {object} services - Information about your extension. Used by Roon to display to the end user what is trying to access Roon.
+ * @param {object[]} [services.required_services] - A list of services which the Roon Core must provide.
+ * @param {object[]} [services.optional_services] - A list of services which the Roon Core may provide.
+ * @param {object[]} [services.provided_services] - A list of services which this extension provides to the Roon Core.
+ */
 RoonApi.prototype.init_services = function(o) {
     if (!Array.isArray(o.required_services)) o.required_services = []; 
     if (!Array.isArray(o.optional_services)) o.optional_services = [];
@@ -128,6 +168,9 @@ RoonApi.prototype.init_services = function(o) {
 //      WebBrowser: localStroage
 //
 if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
+    /**
+     * Begin the discovery process to find/connect to a Roon Core.
+     */
     RoonApi.prototype.start_discovery = function() {
 	if (this._sood) return;
 	this._sood = require('./sood.js');
@@ -148,6 +191,11 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
     };
 
     var fs = require('fs');
+    /**
+     * Save a key value pair in the configuration data store.
+     * @param {string} key
+     * @param {object} value
+     */
     RoonApi.prototype.save_config = function(k, v) {
         try {
             let config;
@@ -165,6 +213,11 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
         } catch (e) { }
     };
 
+    /**
+     * Load a key value pair in the configuration data store.
+     * @param {string} key
+     * @return {object} value
+     */
     RoonApi.prototype.load_config = function(k) {
         try {
             let content = fs.readFileSync("config.json", { encoding: 'utf8' });
