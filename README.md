@@ -1,3 +1,6 @@
+[![Gitter Chat](https://img.shields.io/badge/gitter-%20chat%20%E2%86%92-blue.svg)](https://gitter.im/RoonLabs/node-roon-api)
+![Status](https://img.shields.io/badge/status-beta-red.svg)
+[![LICENSE](https://img.shields.io/badge/license-Apache%20License%202.0-yellow.svg)](https://github.com/RoonLabs/node-roon-api/blob/master/LICENSE)
 # Roon API for Javascript: An overview and tutorial
 ------------
 
