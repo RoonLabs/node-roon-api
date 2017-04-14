@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e # Exit with nonzero exit code if anything fails
+set -ex # Exit with nonzero exit code if anything fails
 
 TARGET_BRANCH="gh-pages"
 
@@ -30,10 +30,10 @@ cd ..
 git config user.name "Travis CI"
 git config user.email "$COMMIT_AUTHOR_EMAIL"
 
-npm install jsdoc
+npm install -g jsdoc
 
 mkdir -p docs
-./node_modules/.bin/jsdoc `find . -name \*.js` -d docs
+jsdoc `find . -name \*.js` -d docs
 git add docs
 
 git commit -m "Deploy to GitHub Pages"
