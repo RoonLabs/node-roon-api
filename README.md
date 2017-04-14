@@ -4,6 +4,8 @@
 # Roon API for Javascript: An overview and tutorial
 ------------
 
+JSDoc Documentation: https://roonlabs.github.io/node-roon-api/
+
 ## Getting started
 
 1. This Roon API for Javascript is called `node-roon-api`, because it has
