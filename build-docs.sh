@@ -1,7 +1,5 @@
 #!/bin/bash
-set -ex # Exit with nonzero exit code if anything fails
-
-TARGET_BRANCH="gh-pages"
+set -ex
 
 # Pull requests and commits to other branches shouldn't try to deploy, just build to verify
 if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != master ]; then
@@ -12,6 +10,8 @@ fi
 # Save some useful information
 REPO=`git config remote.origin.url`
 SSH_REPO=${REPO/https:\/\/github.com\//git@github.com:}
+
+git checkout master
 
 rm -rf other
 mkdir other
