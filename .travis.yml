@@ -1,0 +1,9 @@
+language: node_js
+node_js:
+  - "node"
+
+script: bash ./build_docs.sh
+env:
+  global:
+  - ENCRYPTION_LABEL: "69d6e83228e2"
+  - COMMIT_AUTHOR_EMAIL: "danny@roonlabs.com"
