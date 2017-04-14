@@ -48,4 +48,4 @@ chmod 600 deploy_key
 eval `ssh-agent -s`
 ssh-add deploy_key
 
-git subtree push --prefix docs $SSH_REPO master gh-pages
+git subtree push --prefix docs $SSH_REPO gh-pages
