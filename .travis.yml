@@ -2,7 +2,7 @@ language: node_js
 node_js:
   - "node"
 
-script: bash ./build_docs.sh
+script: bash ./build-docs.sh
 env:
   global:
   - ENCRYPTION_LABEL: "69d6e83228e2"
