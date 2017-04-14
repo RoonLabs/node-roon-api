@@ -33,7 +33,7 @@ git config user.email "$COMMIT_AUTHOR_EMAIL"
 npm install -g jsdoc
 
 mkdir -p docs
-jsdoc `find . -name \*.js` -d docs
+jsdoc *.js other/*/*.js -d docs
 git add docs
 
 git commit -m "Deploy to GitHub Pages"
