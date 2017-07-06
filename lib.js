@@ -256,22 +256,23 @@ RoonApi.prototype.register_service = function(svcname, spec) {
 	    ret._subtypes[subname] = { };
 	    spec.methods[subname] = (req) => {
 		// XXX make sure req.body.subscription_key exists or respond send_complete with error
-
+                let subkey = req.moo.ws.url + "|" + req.body.subscription_key;
 		var newreq = {
 		    send_continue: function() {
 			req.send_continue.apply(req, arguments);
 		    },
 		    send_complete: function() {
 			req.send_complete.apply(req, arguments);
-			delete(ret._subtypes[subname][req.body.subscription_key]);
+			delete(ret._subtypes[subname][subkey]);
 		    }
 		};
 		s.start(newreq, req);
-		ret._subtypes[subname][req.body.subscription_key] = newreq;
+		ret._subtypes[subname][subkey] = newreq;
 	    };
 	    spec.methods[s.unsubscribe_name] = (req) => {
 		// XXX make sure req.body.subscription_key exists or respond send_complete with error
-                delete(ret._subtypes[subname][req.body.subscription_key]);
+                let subkey = req.moo.ws.url + "|" + req.body.subscription_key;
+                delete(ret._subtypes[subname][subkey]);
 		if (s.end) s.end(req);
 		req.send_complete("Unsubscribed");
 	    };
