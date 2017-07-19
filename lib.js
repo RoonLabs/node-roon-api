@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Roon API.
+Root: /Users/danny/work/roonextensions [ OK ]                                   
  * @class RoonApi
  * @param {object} desc - Information about your extension. Used by Roon to display to the end user what is trying to access Roon.
  * @param {string} desc.extension_id - A unique ID for this extension. Something like @com.your_company_or_name.name_of_extension@.
@@ -254,25 +254,24 @@ RoonApi.prototype.register_service = function(svcname, spec) {
 	    let s = spec.subscriptions[x];
 	    let subname = s.subscribe_name;
 	    ret._subtypes[subname] = { };
+
 	    spec.methods[subname] = (req) => {
 		// XXX make sure req.body.subscription_key exists or respond send_complete with error
-                let subkey = req.moo.ws.url + "|" + req.body.subscription_key;
-		var newreq = {
-		    send_continue: function() {
-			req.send_continue.apply(req, arguments);
-		    },
-		    send_complete: function() {
-			req.send_complete.apply(req, arguments);
-			delete(ret._subtypes[subname][subkey]);
-		    }
-		};
-		s.start(newreq, req);
-		ret._subtypes[subname][subkey] = newreq;
+
+                req.orig_send_complete = req.send_complete; 
+                req.send_complete = function() {
+                    this.orig_send_complete.apply(this, arguments);
+                    delete(ret._subtypes[subname][req.moo.mooid][this.body.subscription_key]);
+                };
+		s.start(req);
+                if (!ret._subtypes[subname].hasOwnProperty(req.moo.mooid)) {
+                    ret._subtypes[subname][req.moo.mooid] = { };
+                }
+		ret._subtypes[subname][req.moo.mooid][req.body.subscription_key] = req;
 	    };
 	    spec.methods[s.unsubscribe_name] = (req) => {
 		// XXX make sure req.body.subscription_key exists or respond send_complete with error
-                let subkey = req.moo.ws.url + "|" + req.body.subscription_key;
-                delete(ret._subtypes[subname][subkey]);
+                delete(ret._subtypes[subname][req.moo.mooid][req.body.subscription_key]);
 		if (s.end) s.end(req);
 		req.send_complete("Unsubscribed");
 	    };
@@ -280,7 +279,7 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     }
 
     // process incoming requests from the other side
-    this._service_request_handlers[svcname] = req => {
+    this._service_request_handlers[svcname] = (req, mooid) => {
 	// make sure the req's request name is something we know about
         if (req) {
             let method = spec.methods[req.msg.name]; 
@@ -294,7 +293,7 @@ RoonApi.prototype.register_service = function(svcname, spec) {
                 for (let x in spec.subscriptions) {
                     let s = spec.subscriptions[x];
                     let subname = s.subscribe_name;
-                    ret._subtypes[subname] = { };
+                    ret._subtypes[subname][mooid] = { };
                     if (s.end) s.end(req);
                 }
             }
@@ -302,8 +301,16 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     };
 
     ret.name = svcname;
-    ret.send_continue_all = (subtype, name, props) => { for (let x in ret._subtypes[subtype]) ret._subtypes[subtype][x].send_continue(name, props); };
-    ret.send_complete_all = (subtype, name, props) => { for (let x in ret._subtypes[subtype]) ret._subtypes[subtype][x].send_complete(name, props); };
+    ret.send_continue_all = (subtype, name, props) => {
+        for (let id in ret._subtypes[subtype]) {
+            for (let x in ret._subtypes[subtype][id]) (ret._subtypes[subtype][id][x].send_continue(name, props));
+        }
+    };
+    ret.send_complete_all = (subtype, name, props) => {
+        for (let id in ret._subtypes[subtype]) {
+            for (let x in ret._subtypes[subtype][id]) (ret._subtypes[subtype][id][x].send_complete(name, props));
+        }
+    };
     return ret;
 };
 
@@ -355,7 +362,7 @@ RoonApi.prototype.connect = function() {
 
     ret.ws.onclose = () => {
 //        console.log("CLOSE");
-        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null));
+        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, ret.moo.mooid));
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
         ret.ws.close();
@@ -381,7 +388,7 @@ RoonApi.prototype.connect = function() {
             var req = new MooMessage(ret.moo, msg, body);
             var handler = this._service_request_handlers[msg.service];
             if (handler)
-                handler(req);
+                handler(req, req.moo.mooid);
             else
                 req.send_complete("InvalidRequest", { error: "unknown service: " + msg.service });
         } else {
