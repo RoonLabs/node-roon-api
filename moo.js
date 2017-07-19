@@ -5,7 +5,10 @@ function Moo(ws) {
     this.reqid = 0;
     this.subkey = 0;
     this.requests = {};
+    this.mooid = Moo._counter++;
 }
+
+Moo._counter = 0;
 
 Moo.prototype._subscribe_helper = function(svcname, reqname, cb) {
     var self = this;
