@@ -32,7 +32,7 @@ Roon API.
  */
 
 var uuid       = require('node-uuid'),
-    Transport  = require('./transport.js'),
+    Transport  = require('./transport-websocket.js'),
     MooMessage = require('./moomsg.js'),
     Core       = require('./core.js');
 
