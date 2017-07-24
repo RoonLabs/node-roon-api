@@ -16,6 +16,10 @@ function Transport(host) {
         this.onopen();
     };
 
+    this.ws.onclose = () => {
+        this.onclose();
+    };
+
     this.ws.onmessage = (event) => {
         if (!this.moo) return;
         var msg = this.moo.parse(event.data);
