@@ -1,7 +1,7 @@
 "use strict";
 
 /**
-Root: /Users/danny/work/roonextensions [ OK ]                                   
+Roon API.                                   
  * @class RoonApi
  * @param {object} desc - Information about your extension. Used by Roon to display to the end user what is trying to access Roon.
  * @param {string} desc.extension_id - A unique ID for this extension. Something like @com.your_company_or_name.name_of_extension@.
