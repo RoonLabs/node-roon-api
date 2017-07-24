@@ -1,6 +1,5 @@
 "use strict";
 
-
 // polyfill websockets in Node
 if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
@@ -22,9 +21,9 @@ function Transport(host) {
 
     this.ws.onmessage = (event) => {
         if (!this.moo) return;
-        var msg = this.moo.parse(event.data);
-        if (!msg) return;
-        this.onmessage(msg);
+        var result = this.moo.parse(event.data);
+        if (!result || !result.is_success) return;
+        this.onmessage(result.msg);
     };
 }
 

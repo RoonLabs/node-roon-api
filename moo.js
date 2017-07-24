@@ -71,9 +71,14 @@ Moo.prototype.send_request = function() {
     this.reqid++;
 };
 
-Moo.prototype.parse = function(buf) {
+Moo.prototype.parse = function(buf, close_on_error = true) {
     var e = 0;
     var s = 0;
+    var ret = {
+        is_success: false,
+        bytes_consumed: 0,
+        msg: {}
+    };
     var msg = {
         content_length: 0,
         headers: {}
@@ -94,8 +99,8 @@ Moo.prototype.parse = function(buf) {
                     // end of MOO header
                     if (msg.request_id === undefined) {
                         console.log('MOO: missing Request-Id header: ', msg);
-                        transport.close();
-                        return;
+                        if (close_on_error) transport.close();
+                        return ret;
                     }
                     if (msg.content_length > 0) {
                         if (msg.content_type == "application/json") {
@@ -104,15 +109,19 @@ Moo.prototype.parse = function(buf) {
                                 msg.body = JSON.parse(json);
                             } catch (e) {
                                 console.log("MOO: bad json body: ", json, msg);
-                                transport.close();
-                                return;
+                                if (close_on_error) transport.close();
+                                return ret;
                             }
                         } else {
                           msg.body = buf.slice(e+1, e+1+msg.content_length);
                         }
+                        ret.bytes_consumed = e + 1 + msg.content_length;
+                    } else {
+                        ret.bytes_consumed = e;
                     }
-		    return msg;
-
+                    ret.msg = msg;
+                    ret.is_success = true;
+		    return ret;
                 } else {
                     // parse MOO header line
                     var line = buf.toString('utf8', s, e);
@@ -128,8 +137,8 @@ Moo.prototype.parse = function(buf) {
                             msg.headers[matches[1]] = matches[2];
                     } else {
                         console.log("MOO: bad header: ", line, msg);
-                        transport.close();
-                        return;
+                        if (close_on_error) transport.close();
+                        return ret;
                     }
                 }
             } else {
@@ -145,8 +154,8 @@ Moo.prototype.parse = function(buf) {
                             msg.name = matches[2];
                         } else {
                             console.log("MOO: bad request header: ", line, msg);
-                            transport.close();
-                            return;
+                            if (close_on_error) transport.close();
+                            return ret;
                         }
                     } else {
                         msg.name = matches[3];
@@ -154,8 +163,8 @@ Moo.prototype.parse = function(buf) {
                     state = 'header';
                 } else {
                     console.log("MOO: bad header: ", line, msg);
-                    transport.close();
-                    return;
+                        if (close_on_error) transport.close();
+                    return ret;
                 }
             }
             s = e+1;
