@@ -1,7 +1,7 @@
 "use strict";
 
-function Moo(ws) {
-    this.ws = ws;
+function Moo(transport) {
+    this.transport = transport;
     this.reqid = 0;
     this.subkey = 0;
     this.requests = {};
@@ -25,7 +25,7 @@ Moo.prototype._subscribe_helper = function(svcname, reqname, cb) {
                                 { subscription_key: subkey },
                                 ucb);
         }
-    }
+    };
 };
 
 Moo.prototype.send_request = function() {
@@ -63,9 +63,9 @@ Moo.prototype.send_request = function() {
     console.log('-> REQUEST', this.reqid, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
-        this.ws.send(Buffer.concat([ m, body ], m.length + body.length), { binary: true, mask: true});
+        this.transport.send(Buffer.concat([ m, body ], m.length + body.length));
     else
-        this.ws.send(m, { binary: true, mask: true});
+        this.transport.send(m);
 
     this.requests[this.reqid] = { cb: cb };
     this.reqid++;
@@ -94,7 +94,7 @@ Moo.prototype.parse = function(buf) {
                     // end of MOO header
                     if (msg.request_id === undefined) {
                         console.log('MOO: missing Request-Id header: ', msg);
-                        ws.close();
+                        transport.close();
                         return;
                     }
                     if (msg.content_length > 0) {
@@ -104,11 +104,11 @@ Moo.prototype.parse = function(buf) {
                                 msg.body = JSON.parse(json);
                             } catch (e) {
                                 console.log("MOO: bad json body: ", json, msg);
-                                ws.close();
+                                transport.close();
                                 return;
                             }
                         } else {
-                            msg.body = buf.slice(e+1, e+1+msg.content_length);
+                          msg.body = buf.slice(e+1, e+1+msg.content_length);
                         }
                     }
 		    return msg;
@@ -128,7 +128,7 @@ Moo.prototype.parse = function(buf) {
                             msg.headers[matches[1]] = matches[2];
                     } else {
                         console.log("MOO: bad header: ", line, msg);
-                        ws.close();
+                        transport.close();
                         return;
                     }
                 }
@@ -145,7 +145,7 @@ Moo.prototype.parse = function(buf) {
                             msg.name = matches[2];
                         } else {
                             console.log("MOO: bad request header: ", line, msg);
-                            ws.close();
+                            transport.close();
                             return;
                         }
                     } else {
@@ -154,7 +154,7 @@ Moo.prototype.parse = function(buf) {
                     state = 'header';
                 } else {
                     console.log("MOO: bad header: ", line, msg);
-                    ws.close();
+                    transport.close();
                     return;
                 }
             }

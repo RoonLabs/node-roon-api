@@ -44,9 +44,9 @@ MooMessage.prototype.send_continue = function() {
     console.log('-> CONTINUE', this.msg.request_id, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
-        this.moo.ws.send(Buffer.concat([ m, body ], m.length + body.length), { binary: true, mask: true});
+        this.moo.transport.send(Buffer.concat([ m, body ], m.length + body.length));
     else
-        this.moo.ws.send(m, { binary: true, mask: true});
+        this.moo.transport.send(m);
 };
 
 MooMessage.prototype.send_complete = function() {
@@ -87,9 +87,9 @@ MooMessage.prototype.send_complete = function() {
     console.log('-> COMPLETE', this.msg.request_id, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
-        this.moo.ws.send(Buffer.concat([ m, body ], m.length + body.length), { binary: true, mask: true});
+        this.moo.transport.send(Buffer.concat([ m, body ], m.length + body.length));
     else
-        this.moo.ws.send(m, { binary: true, mask: true});
+        this.moo.transport.send(m);
 };
 
 

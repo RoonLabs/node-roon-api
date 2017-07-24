@@ -31,11 +31,8 @@ Roon API.
  * @param {Core} core
  */
 
-// polyfill websockets in Node
-if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
-
 var uuid       = require('node-uuid'),
-    Moo        = require('./moo.js'),
+    Transport  = require('./transport.js'),
     MooMessage = require('./moomsg.js'),
     Core       = require('./core.js');
 
@@ -322,14 +319,10 @@ RoonApi.prototype.connect = function() {
     if (typeof(arguments[i]) != "function") host += ":" + arguments[i++];
     cb = arguments[i++];
 
-    var ret = {
-        ws: new WebSocket('ws://' + host + '/api')
-    };
-    if (typeof(window) != "undefined") ret.ws.binaryType = 'arraybuffer';
+    var ret = new Transport(host);
 
-    ret.ws.onopen = () => {
+    ret.onopen = () => {
 //        console.log("OPEN");
-        ret.moo = new Moo(ret.ws);
 
         ret.moo.send_request("com.roonlabs.registry:1/info",
 			 (msg, body) => {
@@ -360,27 +353,25 @@ RoonApi.prototype.connect = function() {
 			 });
     };
 
-    ret.ws.onclose = () => {
+    ret.onclose = () => {
 //        console.log("CLOSE");
         Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, ret.moo.mooid));
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
-        ret.ws.close();
+        ret.close();
         cb && cb();
     };
 
-    ret.ws.onerror = err => {
+    /*
+    ret.onerror = err => {
 //        console.log("ERROR", err);
 	if (ret.moo) ret.moo.close();
 	ret.moo = undefined;
-        ret.ws.close();
-    };
+        ret.close();
+    };*/
 
-    ret.ws.onmessage = event => {
+    ret.onmessage = msg => {
 //        console.log("GOTMSG");
-	if (!ret.moo) return;
-        var msg = ret.moo.parse(event.data);
-        if (!msg) return;
         var body = msg.body;
         delete(msg.body);
         if (msg.verb == "REQUEST") {
