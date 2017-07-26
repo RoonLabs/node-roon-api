@@ -71,7 +71,7 @@ Moo.prototype.send_request = function() {
     this.reqid++;
 };
 
-Moo.prototype.parse = function(buf, close_on_error = true) {
+Moo.prototype.parse = function(buf) {
     var e = 0;
     var s = 0;
     var ret = {
@@ -99,7 +99,6 @@ Moo.prototype.parse = function(buf, close_on_error = true) {
                     // end of MOO header
                     if (msg.request_id === undefined) {
                         console.log('MOO: missing Request-Id header: ', msg);
-                        if (close_on_error) transport.close();
                         return ret;
                     }
                     if (msg.content_length > 0) {
@@ -109,7 +108,6 @@ Moo.prototype.parse = function(buf, close_on_error = true) {
                                 msg.body = JSON.parse(json);
                             } catch (e) {
                                 console.log("MOO: bad json body: ", json, msg);
-                                if (close_on_error) transport.close();
                                 return ret;
                             }
                         } else {
@@ -137,7 +135,6 @@ Moo.prototype.parse = function(buf, close_on_error = true) {
                             msg.headers[matches[1]] = matches[2];
                     } else {
                         console.log("MOO: bad header: ", line, msg);
-                        if (close_on_error) transport.close();
                         return ret;
                     }
                 }
@@ -154,7 +151,6 @@ Moo.prototype.parse = function(buf, close_on_error = true) {
                             msg.name = matches[2];
                         } else {
                             console.log("MOO: bad request header: ", line, msg);
-                            if (close_on_error) transport.close();
                             return ret;
                         }
                     } else {
@@ -163,7 +159,6 @@ Moo.prototype.parse = function(buf, close_on_error = true) {
                     state = 'header';
                 } else {
                     console.log("MOO: bad header: ", line, msg);
-                        if (close_on_error) transport.close();
                     return ret;
                 }
             }
@@ -172,6 +167,7 @@ Moo.prototype.parse = function(buf, close_on_error = true) {
         e++;
     }
     console.log("ignoring malformed moo msg");
+    return ret;
 };
 
 Moo.prototype.handle_response = function(msg, body) {

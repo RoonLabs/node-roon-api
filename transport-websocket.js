@@ -22,7 +22,10 @@ function Transport(host) {
     this.ws.onmessage = (event) => {
         if (!this.moo) return;
         var result = this.moo.parse(event.data);
-        if (!result || !result.is_success) return;
+        if (!result || !result.is_success) {
+            this.close();
+            return;
+        }
         this.onmessage(result.msg);
     };
 }
