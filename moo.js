@@ -115,7 +115,7 @@ Moo.prototype.parse = function(buf) {
                         }
                         ret.bytes_consumed = e + 1 + msg.content_length;
                     } else {
-                        ret.bytes_consumed = e;
+                        ret.bytes_consumed = e + 1;
                     }
                     ret.msg = msg;
                     ret.is_success = true;
