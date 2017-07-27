@@ -31,8 +31,7 @@ Roon API.
  * @param {Core} core
  */
 
-var uuid       = require('node-uuid'),
-    Transport  = require('./transport-websocket.js'),
+var Transport  = require('./transport-websocket.js'),
     MooMessage = require('./moomsg.js'),
     Core       = require('./core.js');
 
@@ -183,7 +182,7 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
             }
         });
         this._sood.start(() => {
-	    this._sood.query({ '_tid':uuid.v4(), query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+	    this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
 	});
     };
 

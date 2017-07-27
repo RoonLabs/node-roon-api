@@ -4,6 +4,7 @@ var util    = require("util"),
     events  = require('events'),
     dgram   = require('dgram'),
     IP      = require('ip'),
+    uuid    = require('node-uuid'),
     os      = require('os');
 
 var SOOD_PORT         = 9003;
@@ -60,6 +61,10 @@ function _parse(buf, minfo) {
 }
 
 Sood.prototype.query = function(msg) {
+    if (!msg['_tid']) {
+        msg['_tid'] =  uuid.v4(); 
+    }
+    
     var buf = new Buffer(65535);
     buf.write("SOOD");
     buf[4] = 2;
