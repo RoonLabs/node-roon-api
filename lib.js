@@ -186,7 +186,8 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
 	});
     };
 
-    var fs = (_fs === undefined) ? require('fs') : _fs;
+    var fs = ((typeof _fs) === 'undefined') ? require('fs') : _fs;
+
     /**
      * Save a key value pair in the configuration data store.
      * @param {string} key
