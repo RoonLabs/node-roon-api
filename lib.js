@@ -92,9 +92,9 @@ function RoonApi(o) {
  * @param {object[]} [services.provided_services] - A list of services which this extension provides to the Roon Core.
  */
 RoonApi.prototype.init_services = function(o) {
-    if (!Array.isArray(o.required_services)) o.required_services = []; 
-    if (!Array.isArray(o.optional_services)) o.optional_services = [];
-    if (!Array.isArray(o.provided_services)) o.provided_services = [];
+    if (!(o.required_services instanceof Array)) o.required_services = []; 
+    if (!(o.optional_services instanceof Array)) o.optional_services = [];
+    if (!(o.provided_services instanceof Array)) o.provided_services = [];
 
     if (o.required_services.length || o.optional_services.length)
 	if (!this.extension_opts.core_paired && !this.extension_opts.core_found) throw new Error("Roon Extensions options has required or optional services, but has neither .core_paired nor .core_found.");
@@ -187,7 +187,7 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
 	});
     };
 
-    var fs = require('fs');
+    var fs = (_fs === undefined) ? require('fs') : _fs;
     /**
      * Save a key value pair in the configuration data store.
      * @param {string} key
