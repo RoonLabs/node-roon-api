@@ -176,7 +176,7 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
             if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
                 if (this._sood_conns[msg.props.unique_id]) return;
                 this._sood_conns[msg.props.unique_id] = true;
-                this.connect(msg.from.ip, msg.props.http_port, () => {
+                this.connect(msg.from.ip, msg.props.http_port, msg.props.tcp_port, () => {
                     delete(this._sood_conns[msg.props.unique_id]);
                 });
             }
@@ -310,15 +310,8 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     return ret;
 };
 
-RoonApi.prototype.connect = function() {
-    var host, cb;
-
-    var i = 0;
-    host = arguments[i++];
-    if (typeof(arguments[i]) != "function") host += ":" + arguments[i++];
-    cb = arguments[i++];
-
-    var ret = new Transport(host);
+RoonApi.prototype.connect = function(ip, http_port, tcp_port, cb) {
+    var ret = new Transport(ip, http_port, tcp_port);
 
     ret.onopen = () => {
 //        console.log("OPEN");
