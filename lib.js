@@ -79,6 +79,7 @@ function RoonApi(o) {
     if (o.website) this.extension_reginfo.website = o.website;
 
     this.extension_opts = o;
+    this.is_paired = false;
 }
 
  /**
@@ -130,6 +131,7 @@ RoonApi.prototype.init_services = function(o) {
 		    this.set_persisted_state(settings);
 
 		    this.paired_core_id = core.core_id;
+                    this.is_paired = true;
 		    svc.send_continue_all("subscribe_pairing", "Changed", { paired_core_id: this.paired_core_id  })
 		}
 		if (core.core_id == this.paired_core_id)
@@ -137,6 +139,7 @@ RoonApi.prototype.init_services = function(o) {
 	    },
 	    lost_core: core => {
 		if (core.core_id == this.paired_core_id)
+                    this.is_paired = false;
 		    if (this.extension_opts.core_unpaired) this.extension_opts.core_unpaired(core);
 	    },
 	};
@@ -181,9 +184,22 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
                 });
             }
         });
+        this._sood.on('network', () => {
+            this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+        });
         this._sood.start(() => {
 	    this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+            setInterval(() => this.periodic_scan(), (10 * 1000));
+            this.scan_count = -1;
 	});
+    };
+
+    RoonApi.prototype.periodic_scan = function() {
+        this.scan_count += 1;
+        if (this.is_paired) return;
+        if ((this.scan_count < 6) || ((this.scan_count % 6) == 0)) {
+            this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+        }
     };
 
     var fs = ((typeof _fs) === 'undefined') ? require('fs') : _fs;
