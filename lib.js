@@ -179,7 +179,8 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
             if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
                 if (this._sood_conns[msg.props.unique_id]) return;
                 this._sood_conns[msg.props.unique_id] = true;
-                this.connect(msg.from.ip, msg.props.http_port, msg.props.tcp_port, () => {
+                var trans = new Transport(msg.from.ip, msg.props.http_port, msg.props.tcp_port);
+                this.connect(trans, () => {
                     delete(this._sood_conns[msg.props.unique_id]);
                 });
             }
@@ -327,65 +328,63 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     return ret;
 };
 
-RoonApi.prototype.connect = function(ip, http_port, tcp_port, cb) {
-    var ret = new Transport(ip, http_port, tcp_port);
+RoonApi.prototype.connect = function(transport, cb) {
+    transport.onopen = () => {
+        //        console.log("OPEN");
 
-    ret.onopen = () => {
-//        console.log("OPEN");
+        transport.moo.send_request("com.roonlabs.registry:1/info",
+			     (msg, body) => {
+			         if (!msg) return;
+			         let s = this.get_persisted_state();
+			         if (s.tokens && s.tokens[body.core_id]) this.extension_reginfo.token = s.tokens[body.core_id];
+			         
+			         transport.moo.send_request("com.roonlabs.registry:1/register", this.extension_reginfo,
+					              (msg, body) => {
+						          if (!msg) { // lost connection
+						              if (transport.moo.core) {
+							          if (this.pairing_service_1)        this.pairing_service_1.lost_core(transport.moo.core);
+							          if (this.extension_opts.core_lost) this.extension_opts.core_lost(transport.moo.core);
+							          transport.moo.core = undefined;
+						              }
+						          } else if (msg.name == "Registered") {
+						              transport.moo.core = new Core(transport.moo, this, body);
 
-        ret.moo.send_request("com.roonlabs.registry:1/info",
-			 (msg, body) => {
-			     if (!msg) return;
-			     let s = this.get_persisted_state();
-			     if (s.tokens && s.tokens[body.core_id]) this.extension_reginfo.token = s.tokens[body.core_id];
-			
-			     ret.moo.send_request("com.roonlabs.registry:1/register", this.extension_reginfo,
-					      (msg, body) => {
-						  if (!msg) { // lost connection
-						      if (ret.moo.core) {
-							  if (this.pairing_service_1)        this.pairing_service_1.lost_core(ret.moo.core);
-							  if (this.extension_opts.core_lost) this.extension_opts.core_lost(ret.moo.core);
-							  ret.moo.core = undefined;
-						      }
-						  } else if (msg.name == "Registered") {
-						      ret.moo.core = new Core(ret.moo, this, body);
+						              let settings = this.get_persisted_state();
+						              if (!settings.tokens) settings.tokens = {};
+						              settings.tokens[body.core_id] = body.token;
+						              this.set_persisted_state(settings);
 
-						      let settings = this.get_persisted_state();
-						      if (!settings.tokens) settings.tokens = {};
-						      settings.tokens[body.core_id] = body.token;
-						      this.set_persisted_state(settings);
-
-						      if (this.pairing_service_1)         this.pairing_service_1.found_core(ret.moo.core);
-						      if (this.extension_opts.core_found) this.extension_opts.core_found(ret.moo.core);
-						  }
-					      });
-			 });
+						              if (this.pairing_service_1)         this.pairing_service_1.found_core(transport.moo.core);
+						              if (this.extension_opts.core_found) this.extension_opts.core_found(transport.moo.core);
+						          }
+					              });
+			     });
     };
 
-    ret.onclose = () => {
+    transport.onclose = () => {
 //        console.log("CLOSE");
-        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, ret.moo.mooid));
-	if (ret.moo) ret.moo.close();
-	ret.moo = undefined;
-        ret.close();
+        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, transport.moo.mooid));
+	if (transport.moo) transport.moo.close();
+	transport.moo = undefined;
+        transport.close();
         cb && cb();
     };
 
     /*
-    ret.onerror = err => {
+    transport.onerror = err => {
 //        console.log("ERROR", err);
-	if (ret.moo) ret.moo.close();
-	ret.moo = undefined;
-        ret.close();
+	if (transport.moo) transport.moo.close();
+	transport.moo = undefined;
+        transport.close();
     };*/
 
-    ret.onmessage = msg => {
+    transport.onmessage = msg => {
 //        console.log("GOTMSG");
         var body = msg.body;
         delete(msg.body);
         if (msg.verb == "REQUEST") {
             console.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
-            var req = new MooMessage(ret.moo, msg, body);
+            var req = new MooMessage(transport.moo, msg, body);
             var handler = this._service_request_handlers[msg.service];
             if (handler)
                 handler(req, req.moo.mooid);
@@ -393,11 +392,11 @@ RoonApi.prototype.connect = function(ip, http_port, tcp_port, cb) {
                 req.send_complete("InvalidRequest", { error: "unknown service: " + msg.service });
         } else {
             console.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
-            ret.moo.handle_response(msg, body);
+            transport.moo.handle_response(msg, body);
         }
     };
 
-    return ret;
+    return transport;
 };
 
 exports = module.exports = RoonApi;
