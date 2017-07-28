@@ -35,12 +35,12 @@ var Transport  = require('./transport-websocket.js'),
     MooMessage = require('./moomsg.js'),
     Core       = require('./core.js');
 
-function Logger(log_level) {
-    this._log_level = log_level;
+function Logger(roonapi) {
+    this.roonapi = roonapi;
 };
 
 Logger.prototype.log = function() {
-    if (this._log_level != "none") {
+    if (this.roonapi.log_level != "none") {
         console.log.apply(null, arguments);
     }
 };
@@ -88,7 +88,8 @@ function RoonApi(o) {
     };
     if (o.website) this.extension_reginfo.website = o.website;
 
-    this.logger = new Logger(o.log_level);
+    this.logger = new Logger(this);
+    this.log_level = o.log_level;
     this.extension_opts = o;
     this.is_paired = false;
 }
@@ -395,8 +396,7 @@ RoonApi.prototype.connect = function(transport, cb) {
         var body = msg.body;
         delete(msg.body);
         var logging = msg.headers["Logging"];
-        msg.log = (this.extension_opts.log_level != "none") &&
-                  ((this.extension_opts.log_level == "all") || (logging != "quiet"));
+        msg.log = ((this.log_level == "all") || (logging != "quiet"));
         if (msg.verb == "REQUEST") {
             if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
             var req = new MooMessage(transport.moo, msg, body, this.logger);
