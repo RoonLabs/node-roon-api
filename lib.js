@@ -9,6 +9,7 @@ Roon API.
  * @param {string} desc.display_version - A version string that is displayed to the user for this extension. Can be anything you want.
  * @param {string} desc.publisher - The name of the developer of the extension.
  * @param {string} desc.website - Website for more information about the extension.
+ * @param {string} desc.log_level - How much logging information to print.  "all" for all messages, "none" for no messages, anything else for all messages not tagged as "quiet" by the Roon core.
  * @param {RoonApi~core_paired} [desc.core_paired] - Called when Roon pairs you.
  * @param {RoonApi~core_unpaired} [desc.core_unpaired] - Called when Roon unpairs you.
  * @param {RoonApi~core_found} [desc.core_found] - Called when a Roon Core is found. Usually, you want to implement pairing instead of using this.
