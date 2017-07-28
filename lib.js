@@ -382,8 +382,10 @@ RoonApi.prototype.connect = function(transport, cb) {
 //        console.log("GOTMSG");
         var body = msg.body;
         delete(msg.body);
+        var logging = msg.headers["Logging"];
+        msg.log = (this.extension_opts.log_level == "all") || (logging != "quiet");
         if (msg.verb == "REQUEST") {
-            console.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
+            if (msg.log) console.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
             var req = new MooMessage(transport.moo, msg, body);
             var handler = this._service_request_handlers[msg.service];
             if (handler)
@@ -391,7 +393,7 @@ RoonApi.prototype.connect = function(transport, cb) {
             else
                 req.send_complete("InvalidRequest", { error: "unknown service: " + msg.service });
         } else {
-            console.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
+            if (msg.log) console.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
             transport.moo.handle_response(msg, body);
         }
     };
