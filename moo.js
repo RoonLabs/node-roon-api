@@ -6,6 +6,7 @@ function Moo(transport) {
     this.subkey = 0;
     this.requests = {};
     this.mooid = Moo._counter++;
+    this.logger = transport.logger;
 }
 
 Moo._counter = 0;
@@ -60,7 +61,7 @@ Moo.prototype.send_request = function() {
                   'Content-Type: ' + content_type + '\n';
     }
 
-    console.log('-> REQUEST', this.reqid, name, origbody ? JSON.stringify(origbody) : "");
+    this.logger.log('-> REQUEST', this.reqid, name, origbody ? JSON.stringify(origbody) : "");
     const m = Buffer.from(header + '\n');
     if (body)
         this.transport.send(Buffer.concat([ m, body ], m.length + body.length));
@@ -98,7 +99,7 @@ Moo.prototype.parse = function(buf) {
                 if (s == e) {
                     // end of MOO header
                     if (msg.request_id === undefined) {
-                        console.log('MOO: missing Request-Id header: ', msg);
+                        this.logger.log('MOO: missing Request-Id header: ', msg);
                         return ret;
                     }
                     if (msg.content_length > 0) {
@@ -107,7 +108,7 @@ Moo.prototype.parse = function(buf) {
                             try {
                                 msg.body = JSON.parse(json);
                             } catch (e) {
-                                console.log("MOO: bad json body: ", json, msg);
+                                this.logger.log("MOO: bad json body: ", json, msg);
                                 return ret;
                             }
                         } else {
@@ -134,7 +135,7 @@ Moo.prototype.parse = function(buf) {
                         else
                             msg.headers[matches[1]] = matches[2];
                     } else {
-                        console.log("MOO: bad header: ", line, msg);
+                        this.logger.log("MOO: bad header: ", line, msg);
                         return ret;
                     }
                 }
@@ -150,7 +151,7 @@ Moo.prototype.parse = function(buf) {
                             msg.service = matches[1];
                             msg.name = matches[2];
                         } else {
-                            console.log("MOO: bad request header: ", line, msg);
+                            this.logger.log("MOO: bad request header: ", line, msg);
                             return ret;
                         }
                     } else {
@@ -158,7 +159,7 @@ Moo.prototype.parse = function(buf) {
                     }
                     state = 'header';
                 } else {
-                    console.log("MOO: bad header: ", line, msg);
+                    this.logger.log("MOO: bad header: ", line, msg);
                     return ret;
                 }
             }
@@ -166,7 +167,7 @@ Moo.prototype.parse = function(buf) {
         }
         e++;
     }
-    console.log("ignoring malformed moo msg");
+    this.logger.log("ignoring malformed moo msg");
     return ret;
 };
 

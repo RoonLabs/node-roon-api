@@ -5,11 +5,12 @@ if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
 var Moo = require('./moo.js');
 
-function Transport(ip, http_port, tcp_port) {
+function Transport(ip, http_port, tcp_port, logger) {
     var host = ip + ":" + http_port;
     this.ws = new WebSocket('ws://' + host + '/api');
     if (typeof(window) != "undefined") this.ws.binaryType = 'arraybuffer';
-
+    this.logger = logger;
+    
     this.ws.onopen = () => {
         this.moo = new Moo(this);
         this.onopen();

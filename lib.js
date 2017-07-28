@@ -35,6 +35,16 @@ var Transport  = require('./transport-websocket.js'),
     MooMessage = require('./moomsg.js'),
     Core       = require('./core.js');
 
+function Logger(log_level) {
+    this._log_level = log_level;
+};
+
+Logger.prototype.log = function() {
+    if (this._log_level != "none") {
+        console.log.apply(null, arguments);
+    }
+};
+
 function RoonApi(o) {
     this._service_request_handlers = {};
 
@@ -78,6 +88,7 @@ function RoonApi(o) {
     };
     if (o.website) this.extension_reginfo.website = o.website;
 
+    this.logger = new Logger(o.log_level);
     this.extension_opts = o;
     this.is_paired = false;
 }
@@ -173,13 +184,14 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
     RoonApi.prototype.start_discovery = function() {
 	if (this._sood) return;
 	this._sood = require('./sood.js');
+        this._sood.logger = this.logger;
         this._sood_conns = {};
         this._sood.on('message', msg => {
-//	    console.log(msg);
+//	    this.logger.log(msg);
             if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
                 if (this._sood_conns[msg.props.unique_id]) return;
                 this._sood_conns[msg.props.unique_id] = true;
-                var trans = new Transport(msg.from.ip, msg.props.http_port, msg.props.tcp_port);
+                var trans = new Transport(msg.from.ip, msg.props.http_port, msg.props.tcp_port, this.logger);
                 this.connect(trans, () => {
                     delete(this._sood_conns[msg.props.unique_id]);
                 });
@@ -330,7 +342,7 @@ RoonApi.prototype.register_service = function(svcname, spec) {
 
 RoonApi.prototype.connect = function(transport, cb) {
     transport.onopen = () => {
-        //        console.log("OPEN");
+        //        this.logger.log("OPEN");
 
         transport.moo.send_request("com.roonlabs.registry:1/info",
 			     (msg, body) => {
@@ -347,7 +359,7 @@ RoonApi.prototype.connect = function(transport, cb) {
 							          transport.moo.core = undefined;
 						              }
 						          } else if (msg.name == "Registered") {
-						              transport.moo.core = new Core(transport.moo, this, body);
+						              transport.moo.core = new Core(transport.moo, this, body, this.logger);
 
 						              let settings = this.get_persisted_state();
 						              if (!settings.tokens) settings.tokens = {};
@@ -362,7 +374,7 @@ RoonApi.prototype.connect = function(transport, cb) {
     };
 
     transport.onclose = () => {
-//        console.log("CLOSE");
+//        this.logger.log("CLOSE");
         Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, transport.moo.mooid));
 	if (transport.moo) transport.moo.close();
 	transport.moo = undefined;
@@ -372,28 +384,29 @@ RoonApi.prototype.connect = function(transport, cb) {
 
     /*
     transport.onerror = err => {
-//        console.log("ERROR", err);
+//        this.logger.log("ERROR", err);
 	if (transport.moo) transport.moo.close();
 	transport.moo = undefined;
         transport.close();
     };*/
 
     transport.onmessage = msg => {
-//        console.log("GOTMSG");
+//        this.logger.log("GOTMSG");
         var body = msg.body;
         delete(msg.body);
         var logging = msg.headers["Logging"];
-        msg.log = (this.extension_opts.log_level == "all") || (logging != "quiet");
+        msg.log = (this.extension_opts.log_level != "none") &&
+                  ((this.extension_opts.log_level == "all") || (logging != "quiet"));
         if (msg.verb == "REQUEST") {
-            if (msg.log) console.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
-            var req = new MooMessage(transport.moo, msg, body);
+            if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
+            var req = new MooMessage(transport.moo, msg, body, this.logger);
             var handler = this._service_request_handlers[msg.service];
             if (handler)
                 handler(req, req.moo.mooid);
             else
                 req.send_complete("InvalidRequest", { error: "unknown service: " + msg.service });
         } else {
-            if (msg.log) console.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
+            if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
             transport.moo.handle_response(msg, body);
         }
     };
