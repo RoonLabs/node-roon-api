@@ -7,7 +7,6 @@ var Moo = require('./moo.js');
 
 function Transport(ip, http_port, tcp_port) {
     var host = ip + ":" + http_port;
-    console.log("new transport: " + host);
     this.ws = new WebSocket('ws://' + host + '/api');
     if (typeof(window) != "undefined") this.ws.binaryType = 'arraybuffer';
 
