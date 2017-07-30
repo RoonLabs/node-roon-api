@@ -167,7 +167,7 @@ Moo.prototype.parse = function(buf) {
         }
         e++;
     }
-    this.logger.log("ignoring malformed moo msg");
+    this.logger.log("ignoring malformed moo msg", buf);
     return ret;
 };
 
