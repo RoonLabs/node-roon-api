@@ -112,7 +112,7 @@ Moo.prototype.parse = function(buf) {
                         }
                         
                         if (msg.content_type == "application/json") {
-                            var json = buf.toString('utf8', e+1, e+1+msg.content_length);
+                            var json = buf.toString('utf8', e, e+msg.content_length);
                             try {
                                 msg.body = JSON.parse(json);
                             } catch (e) {
