@@ -229,7 +229,7 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
             let config;
             try {
                 let content = fs.readFileSync("config.json", { encoding: 'utf8' });
-                config = JSON.parse(content);
+                config = JSON.parse(content) || {};
             } catch (e) {
                 config = {};
             } 
