@@ -10,11 +10,10 @@ var util    = require("util"),
 var SOOD_PORT         = 9003;
 var SOOD_MULTICAST_IP = "239.255.90.90";
 
-function Sood(logger) {
+function Sood() {
     this._multicast = {};
     this._unicast = {};
     this._iface_seq = 0;
-    this.logger = logger;
 //    this.on("message", (msg) => { this.logger.log(JSON.stringify(msg)); });
 };
 

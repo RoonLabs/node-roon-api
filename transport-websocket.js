@@ -23,7 +23,7 @@ function Transport(ip, http_port, tcp_port, logger) {
     this.ws.onmessage = (event) => {
         if (!this.moo) return;
         var result = this.moo.parse(event.data);
-        if (!result || !result.is_success) {
+        if (!result || result.is_error) {
             this.close();
             return;
         }

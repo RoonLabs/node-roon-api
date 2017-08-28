@@ -76,7 +76,8 @@ Moo.prototype.parse = function(buf) {
     var e = 0;
     var s = 0;
     var ret = {
-        is_success: false,
+        is_complete: false,
+        is_error: false,
         bytes_consumed: 0,
         msg: {}
     };
@@ -100,26 +101,34 @@ Moo.prototype.parse = function(buf) {
                     // end of MOO header
                     if (msg.request_id === undefined) {
                         this.logger.log('MOO: missing Request-Id header: ', msg);
+                        ret.is_error = true;
                         return ret;
                     }
+                    e++;
                     if (msg.content_length > 0) {
+                        if ((e + msg.content_length) > buf.length) {
+                            this.logger.log("MOO: reached end of buffer while reading body");
+                            return ret;
+                        }
+                        
                         if (msg.content_type == "application/json") {
                             var json = buf.toString('utf8', e+1, e+1+msg.content_length);
                             try {
                                 msg.body = JSON.parse(json);
                             } catch (e) {
                                 this.logger.log("MOO: bad json body: ", json, msg);
+                                ret.is_error = true;
                                 return ret;
                             }
                         } else {
-                          msg.body = buf.slice(e+1, e+1+msg.content_length);
+                          msg.body = buf.slice(e, e + msg.content_length);
                         }
-                        ret.bytes_consumed = e + 1 + msg.content_length;
+                        ret.bytes_consumed = e + msg.content_length;
                     } else {
-                        ret.bytes_consumed = e + 1;
+                        ret.bytes_consumed = e;
                     }
                     ret.msg = msg;
-                    ret.is_success = true;
+                    ret.is_complete = true;
 		    return ret;
                 } else {
                     // parse MOO header line
@@ -136,6 +145,7 @@ Moo.prototype.parse = function(buf) {
                             msg.headers[matches[1]] = matches[2];
                     } else {
                         this.logger.log("MOO: bad header: ", line, msg);
+                        ret.is_error = true;
                         return ret;
                     }
                 }
@@ -152,6 +162,7 @@ Moo.prototype.parse = function(buf) {
                             msg.name = matches[2];
                         } else {
                             this.logger.log("MOO: bad request header: ", line, msg);
+                            ret.is_error = true;
                             return ret;
                         }
                     } else {
@@ -160,6 +171,7 @@ Moo.prototype.parse = function(buf) {
                     state = 'header';
                 } else {
                     this.logger.log("MOO: bad header: ", line, msg);
+                    ret.is_error = true;
                     return ret;
                 }
             }
@@ -167,7 +179,7 @@ Moo.prototype.parse = function(buf) {
         }
         e++;
     }
-    this.logger.log("ignoring malformed moo msg");
+    this.logger.log("MOO: reached end of buffer while parsing header");
     return ret;
 };
 
