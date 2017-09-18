@@ -396,7 +396,7 @@ RoonApi.prototype.connect = function(transport, cb) {
 //        this.logger.log("GOTMSG");
         var body = msg.body;
         delete(msg.body);
-        var logging = msg.headers["Logging"];
+        var logging = msg && msg.headers && msg.headers["Logging"];
         msg.log = ((this.log_level == "all") || (logging != "quiet"));
         if (msg.verb == "REQUEST") {
             if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
