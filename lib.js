@@ -415,4 +415,9 @@ RoonApi.prototype.connect = function(transport, cb) {
     return transport;
 };
 
+RoonApi.prototype.connect_to_host = function(host, http_port, tcp_port, cb) {
+    var trans = new Transport(host, http_port, tcp_port, this.logger);
+    this.connect(trans, cb);
+};
+
 exports = module.exports = RoonApi;
