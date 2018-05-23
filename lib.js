@@ -407,7 +407,9 @@ RoonApi.prototype.connect_to_host = function(host, http_port, tcp_port, cb) {
 RoonApi.prototype.connect_to_host_with_token = function(host, http_port, tcp_port, token, cb) {
     var transport = this.connect_to_host(host, http_port, tcp_port, cb)
     transport.onopen = () => {
-        transport.moo.send_request("com.roonlabs.registry:1/register_one_time_token", { token: token },
+        let args = Object.assign({}, this.extension_reginfo);
+        args.token = token;
+        transport.moo.send_request("com.roonlabs.registry:1/register_one_time_token", args,
                                    (msg, body) => {
                                        if (msg && msg.name == "Registered") body.provided_services = this.extension_reginfo.required_services;
 				       ev_registered.call(this, transport, msg, body);
