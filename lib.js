@@ -353,25 +353,9 @@ RoonApi.prototype.connect = function(transport, cb) {
 			         if (s.tokens && s.tokens[body.core_id]) this.extension_reginfo.token = s.tokens[body.core_id];
 			         
 			         transport.moo.send_request("com.roonlabs.registry:1/register", this.extension_reginfo,
-					              (msg, body) => {
-						          if (!msg) { // lost connection
-						              if (transport.moo.core) {
-							          if (this.pairing_service_1)        this.pairing_service_1.lost_core(transport.moo.core);
-							          if (this.extension_opts.core_lost) this.extension_opts.core_lost(transport.moo.core);
-							          transport.moo.core = undefined;
-						              }
-						          } else if (msg.name == "Registered") {
-						              transport.moo.core = new Core(transport.moo, this, body, this.logger);
-
-						              let settings = this.get_persisted_state();
-						              if (!settings.tokens) settings.tokens = {};
-						              settings.tokens[body.core_id] = body.token;
-						              this.set_persisted_state(settings);
-
-						              if (this.pairing_service_1)         this.pairing_service_1.found_core(transport.moo.core);
-						              if (this.extension_opts.core_found) this.extension_opts.core_found(transport.moo.core);
-						          }
-					              });
+					                    (msg, body) => {
+						                ev_registered.call(this, transport, msg, body);
+					                    });
 			     });
     };
 
@@ -416,8 +400,40 @@ RoonApi.prototype.connect = function(transport, cb) {
 };
 
 RoonApi.prototype.connect_to_host = function(host, http_port, tcp_port, cb) {
-    var trans = new Transport(host, http_port, tcp_port, this.logger);
-    this.connect(trans, cb);
+    var transport = new Transport(host, http_port, tcp_port, this.logger);
+    return this.connect(transport, cb);
 };
+
+RoonApi.prototype.connect_to_host_with_token = function(host, http_port, tcp_port, token, cb) {
+    var transport = this.connect_to_host(host, http_port, tcp_port, cb)
+    transport.onopen = () => {
+        transport.moo.send_request("com.roonlabs.registry:1/register_one_time_token", { token: token },
+                                   (msg, body) => {
+                                       if (msg && msg.name == "Registered") body.provided_services = this.extension_reginfo.required_services;
+				       ev_registered.call(this, transport, msg, body);
+                                   });
+    };
+    return transport;
+}
+
+function ev_registered(transport, msg, body) {
+    if (!msg) { // lost connection
+	if (transport.moo.core) {
+	    if (this.pairing_service_1)        this.pairing_service_1.lost_core(transport.moo.core);
+	    if (this.extension_opts.core_lost) this.extension_opts.core_lost(transport.moo.core);
+	    transport.moo.core = undefined;
+	}
+    } else if (msg.name == "Registered") {
+	transport.moo.core = new Core(transport.moo, this, body, this.logger);
+
+	let settings = this.get_persisted_state();
+	if (!settings.tokens) settings.tokens = {};
+	settings.tokens[body.core_id] = body.token;
+	this.set_persisted_state(settings);
+
+	if (this.pairing_service_1)         this.pairing_service_1.found_core(transport.moo.core);
+	if (this.extension_opts.core_found) this.extension_opts.core_found(transport.moo.core);
+    }
+}
 
 exports = module.exports = RoonApi;
