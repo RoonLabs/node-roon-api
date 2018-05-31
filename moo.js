@@ -12,10 +12,15 @@ function Moo(transport) {
 Moo._counter = 0;
 
 Moo.prototype._subscribe_helper = function(svcname, reqname, cb) {
+    var subscription_args = {};
+    if (arguments.length == 4) {
+        cb = arguments[3];
+        subscription_args = arguments[2];
+    }
     var self = this;
     var subkey = self.subkey++;
-    self.send_request(svcname + "/subscribe_" + reqname,
-                            { subscription_key: subkey },
+    subscription_args.subscription_key = subkey;
+    self.send_request(svcname + "/subscribe_" + reqname, subscription_args,
                             function (msg, body) {
                                 if (cb)
                                     cb(msg && msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), body);
