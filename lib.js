@@ -193,10 +193,7 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
             if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
                 if (this._sood_conns[msg.props.unique_id]) return;
                 this._sood_conns[msg.props.unique_id] = true;
-                var trans = new Transport(msg.from.ip, msg.props.http_port, msg.props.tcp_port, this.logger);
-                this.connect(trans, () => {
-                    delete(this._sood_conns[msg.props.unique_id]);
-                });
+                this.connect(new Transport(msg.from.ip, msg.props.http_port, msg.props.tcp_port, this.logger), () => { delete(this._sood_conns[msg.props.unique_id]); });
             }
         });
         this._sood.on('network', () => {
@@ -361,9 +358,11 @@ RoonApi.prototype.connect = function(transport, cb) {
 
     transport.onclose = () => {
 //        this.logger.log("CLOSE");
-        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, transport.moo.mooid));
-	if (transport.moo) transport.moo.close();
-	transport.moo = undefined;
+	if (transport.moo) {
+            Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, transport.moo.mooid));
+            transport.moo.close();
+            transport.moo = undefined;
+        }
         transport.close();
         cb && cb();
     };
@@ -400,8 +399,7 @@ RoonApi.prototype.connect = function(transport, cb) {
 };
 
 RoonApi.prototype.connect_to_host = function(host, http_port, tcp_port, cb) {
-    var transport = new Transport(host, http_port, tcp_port, this.logger);
-    return this.connect(transport, cb);
+    return this.connect(new Transport(host, http_port, tcp_port, this.logger), cb);
 };
 
 RoonApi.prototype.connect_to_host_with_token = function(host, http_port, tcp_port, token, cb) {
