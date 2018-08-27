@@ -318,7 +318,7 @@ RoonApi.prototype.register_service = function(svcname, spec) {
                 for (let x in spec.subscriptions) {
                     let s = spec.subscriptions[x];
                     let subname = s.subscribe_name;
-                    ret._subtypes[subname][mooid] = { };
+                    delete(ret._subtypes[subname][mooid]);
                     if (s.end) s.end(req);
                 }
             }
