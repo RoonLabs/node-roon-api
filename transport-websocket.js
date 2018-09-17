@@ -23,7 +23,9 @@ function Transport(ip, http_port, tcp_port, logger) {
     this.ws.onmessage = (event) => {
         if (!this.moo) return;
         var result = this.moo.parse(event.data);
-        if (!result || result.is_error) {
+        //the websocket transport promises that we will get one moo message
+        //per websocket message, so an incomplete message implies an error
+        if (!result || result.is_error || !result.is_complete) {
             this.close();
             return;
         }
