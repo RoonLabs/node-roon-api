@@ -19,7 +19,6 @@ function Transport(ip, port, logger) {
     };
 
     this.ws.onmessage = (event) => {
-        if (!this._isopencalled) return;
         var msg = this.moo.parse(event.data);
         if (!msg) {
             this.close();
@@ -39,7 +38,7 @@ Transport.prototype.close = function() {
         this.ws = undefined;
     }
 
-    if (!this._onclosecalled && this._isopencalled) {
+    if (!this._onclosecalled && this._isonopencalled) {
         this._onclosecalled = true;
         this.onclose();
     }
