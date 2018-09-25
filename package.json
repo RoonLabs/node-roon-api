@@ -1,6 +1,6 @@
 {
   "name": "node-roon-api",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Roon Api Library",
   "main": "lib.js",
   "author": "Roon Labs, LLC",
