@@ -128,15 +128,14 @@ RoonApi.prototype.init_services = function(o) {
 		    req.send_complete("Success", { paired_core_id: this.paired_core_id });
 		},
 		pair: (req) => {
-                    if (!this.paired_core_id || (this.paired_core_id != req.moo.core.core_id)) {
+                    if (this.paired_core_id != req.moo.core.core_id) {
 		        if (this.paired_core) {
                             this.pairing_service_1.lost_core(this.paired_core);
                             delete this.paired_core_id;
                             delete this.paired_core;
                         }
-                        this.pairing_service_1.found_core(req.moo.core);		      
+                        this.pairing_service_1.found_core(req.moo.core);
                     }
-                    svc.send_continue_all("subscribe_pairing", "Changed", { paired_core_id: this.paired_core_id  })
 		},
 	    }
 	});
