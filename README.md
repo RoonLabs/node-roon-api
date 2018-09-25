@@ -380,11 +380,11 @@ FireFox.
 The big exception in functionality is discovery. Roon's discovery protocol uses
 UDP networking packets, and the web browsers don't have access to that. To get
 around this, instead of using `RoonApi:start_discovery()`, you can use
-`RoonApi::connect(host, [port], [close_cb])`. You will have to pass the IP
-address or hostname of your Roon Core to this method, and optionally you can
-pass port number and/or a callback to call upon disconnection (for retrying the
-connection). Unfortunately, this means your web app will probably need an input
-for the IP address of the Roon Core.
+`RoonApi::ws_connect({ host, port, [onclose] })`. You will have to pass the IP
+address or hostname, plus the websocket port of your Roon Core to this method,
+and optionally you can pass a callback to call upon disconnection (for retrying
+the connection). Unfortunately, this means your web app will probably need an
+input for the IP address of the Roon Core.
 
 The best way to use this API is to use [browserify](http://browserify.org/) +
 [partialify](https://github.com/bclinkinbeard/partialify) to combine your

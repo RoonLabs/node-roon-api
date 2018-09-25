@@ -32,9 +32,13 @@ Roon API.
  * @param {Core} core
  */
 
-var Transport  = require('./transport-websocket.js'),
-    MooMessage = require('./moomsg.js'),
-    Core       = require('./core.js');
+/**
+ * @callback RoonApi~onclose
+ */
+
+var WSTransport = require('./transport-websocket.js'),
+    MooMessage  = require('./moomsg.js'),
+    Core        = require('./core.js');
 
 function Logger(roonapi) {
     this.roonapi = roonapi;
@@ -185,15 +189,14 @@ if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
      */
     RoonApi.prototype.start_discovery = function() {
 	if (this._sood) return;
-	this._sood = require('./sood.js');
-        this._sood.logger = this.logger;
+	this._sood = require('./sood.js')(this.logger);
         this._sood_conns = {};
         this._sood.on('message', msg => {
 //	    this.logger.log(msg);
             if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
                 if (this._sood_conns[msg.props.unique_id]) return;
                 this._sood_conns[msg.props.unique_id] = true;
-                this.connect(new Transport(msg.from.ip, msg.props.http_port, msg.props.tcp_port, this.logger), () => { delete(this._sood_conns[msg.props.unique_id]); });
+                this.ws_connect(msg.from.ip, msg.props.http_port, () => { delete(this._sood_conns[msg.props.unique_id]); });
             }
         });
         this._sood.on('network', () => {
@@ -339,39 +342,48 @@ RoonApi.prototype.register_service = function(svcname, spec) {
     return ret;
 };
 
-RoonApi.prototype.connect = function(transport, cb) {
+ /**
+ * If not using Roon discovery, call this to connect to the Core via a websocket.
+ *
+ * @this RoonApi
+ * @param {object}          options
+ * @param {string}          options.host - hostname or ip to connect to
+ * @param {number}          options.port - port to connect to
+ * @param {RoonApi~onclose} [options.onclose] - Called once when connect to host is lost
+ */
+RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
+    let transport = new WSTransport(host, port, this.logger);
+    let moo = new Moo(transport);
+
     transport.onopen = () => {
         //        this.logger.log("OPEN");
 
-        transport.moo.send_request("com.roonlabs.registry:1/info",
+        moo.send_request("com.roonlabs.registry:1/info",
 			     (msg, body) => {
 			         if (!msg) return;
 			         let s = this.get_persisted_state();
 			         if (s.tokens && s.tokens[body.core_id]) this.extension_reginfo.token = s.tokens[body.core_id];
 			         
-			         transport.moo.send_request("com.roonlabs.registry:1/register", this.extension_reginfo,
+			         moo.send_request("com.roonlabs.registry:1/register", this.extension_reginfo,
 					                    (msg, body) => {
-						                ev_registered.call(this, transport, msg, body);
+						                ev_registered.call(this, moo, msg, body);
 					                    });
 			     });
     };
 
     transport.onclose = () => {
 //        this.logger.log("CLOSE");
-	if (transport.moo) {
-            Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, transport.moo.mooid));
-            transport.moo.close();
-            transport.moo = undefined;
-        }
-        transport.close();
-        cb && cb();
+        Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, moo.mooid));
+        moo.clean_up();
+        onclose && onclose();
+        onclose = undefined;
     };
 
     /*
     transport.onerror = err => {
 //        this.logger.log("ERROR", err);
-	if (transport.moo) transport.moo.close();
-	transport.moo = undefined;
+	if (moo) moo.close();
+	moo = undefined;
         transport.close();
     };*/
 
@@ -383,7 +395,7 @@ RoonApi.prototype.connect = function(transport, cb) {
         msg.log = ((this.log_level == "all") || (logging != "quiet"));
         if (msg.verb == "REQUEST") {
             if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.service + "/" +  msg.name, body ? JSON.stringify(body) : "");
-            var req = new MooMessage(transport.moo, msg, body, this.logger);
+            var req = new MooMessage(moo, msg, body, this.logger);
             var handler = this._service_request_handlers[msg.service];
             if (handler)
                 handler(req, req.moo.mooid);
@@ -391,47 +403,48 @@ RoonApi.prototype.connect = function(transport, cb) {
                 req.send_complete("InvalidRequest", { error: "unknown service: " + msg.service });
         } else {
             if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
-            transport.moo.handle_response(msg, body);
+            if (!moo.handle_response(msg, body)) {
+                transport.close(); // this will trigger the above onclose handler
+            }
         }
     };
 
-    return transport;
+    return moo;
 };
 
-RoonApi.prototype.connect_to_host = function(host, http_port, tcp_port, cb) {
-    return this.connect(new Transport(host, http_port, tcp_port, this.logger), cb);
-};
+// DO NOT USE -- internal only
+RoonApi.prototype.ws_connect_with_token = function({ host, port, token, onclose }) {
+    var moo = this.ws_connect({ host, port, onclose })
 
-RoonApi.prototype.connect_to_host_with_token = function(host, http_port, tcp_port, token, cb) {
-    var transport = this.connect_to_host(host, http_port, tcp_port, cb)
-    transport.onopen = () => {
+    moo.transport.onopen = () => {
         let args = Object.assign({}, this.extension_reginfo);
         args.token = token;
-        transport.moo.send_request("com.roonlabs.registry:1/register_one_time_token", args,
+        moo.send_request("com.roonlabs.registry:1/register_one_time_token", args,
                                    (msg, body) => {
-				       ev_registered.call(this, transport, msg, body);
+				       ev_registered.call(this, moo, msg, body);
                                    });
     };
-    return transport;
+
+    return moo;
 }
 
-function ev_registered(transport, msg, body) {
+function ev_registered(moo, msg, body) {
     if (!msg) { // lost connection
-	if (transport.moo.core) {
-	    if (this.pairing_service_1)        this.pairing_service_1.lost_core(transport.moo.core);
-	    if (this.extension_opts.core_lost) this.extension_opts.core_lost(transport.moo.core);
-	    transport.moo.core = undefined;
+	if (moo.core) {
+	    if (this.pairing_service_1)        this.pairing_service_1.lost_core(moo.core);
+	    if (this.extension_opts.core_lost) this.extension_opts.core_lost(moo.core);
+	    moo.core = undefined;
 	}
     } else if (msg.name == "Registered") {
-	transport.moo.core = new Core(transport.moo, this, body, this.logger);
+	moo.core = new Core(moo, this, body, this.logger);
 
 	let settings = this.get_persisted_state();
 	if (!settings.tokens) settings.tokens = {};
 	settings.tokens[body.core_id] = body.token;
 	this.set_persisted_state(settings);
 
-	if (this.pairing_service_1)         this.pairing_service_1.found_core(transport.moo.core);
-	if (this.extension_opts.core_found) this.extension_opts.core_found(transport.moo.core);
+	if (this.pairing_service_1)         this.pairing_service_1.found_core(moo.core);
+	if (this.extension_opts.core_found) this.extension_opts.core_found(moo.core);
     }
 }
 

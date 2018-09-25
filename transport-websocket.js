@@ -5,8 +5,8 @@ if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
 var Moo = require('./moo.js');
 
-function Transport(ip, http_port, tcp_port, logger) {
-    var host = ip + ":" + http_port;
+function Transport(ip, port, logger) {
+    var host = ip + ":" + port;
     this.ws = new WebSocket('ws://' + host + '/api');
     if (typeof(window) != "undefined") this.ws.binaryType = 'arraybuffer';
     this.logger = logger;
@@ -17,17 +17,17 @@ function Transport(ip, http_port, tcp_port, logger) {
     };
 
     this.ws.onclose = () => {
-        this.onclose();
+        this.close();
     };
 
     this.ws.onmessage = (event) => {
         if (!this.moo) return;
-        var result = this.moo.parse(event.data);
-        if (!result || result.is_error) {
+        var msg = this.moo.parse(event.data);
+        if (!msg) {
             this.close();
             return;
         }
-        this.onmessage(result.msg);
+        this.onmessage(msg);
     };
 }
 
@@ -36,7 +36,17 @@ Transport.prototype.send = function(buf) {
 };
 
 Transport.prototype.close = function() {
-    this.ws.close();
+    if (this.ws) {
+        this.ws.close();
+        this.ws = undefined;
+    }
+
+    if (this.moo) {
+        this.onclose();
+
+        this.moo.close();
+        this.moo = undefined;
+    }
 };
 
 Transport.prototype.onopen = function() { };

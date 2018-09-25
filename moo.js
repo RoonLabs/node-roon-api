@@ -80,14 +80,7 @@ Moo.prototype.send_request = function() {
 Moo.prototype.parse = function(buf) {
     var e = 0;
     var s = 0;
-    var ret = {
-        is_complete: false,
-        is_error: false,
-        bytes_consumed: 0,
-        msg: {}
-    };
     var msg = {
-        content_length: 0,
         headers: {}
     };
 
@@ -97,44 +90,52 @@ Moo.prototype.parse = function(buf) {
         var buf = new Buffer(buf.byteLength);
         for (var i = 0; i < buf.length; ++i) buf[i] = view[i];
     }
+
+    if (buf.length == 0) {
+        this.logger.log("MOO: empty message received");
+        return undefined;
+    }
+
     var state;
     while (e < buf.length) {
-        if (buf[e] == 0xa) {
+        if (buf[e] == 0xa) { // looking to parse lines -- s == start of line, e == end of line
             // parsing headers or first line?
             if (state == 'header') {
-                if (s == e) {
+                if (s == e) { // is blank line? blank line is end of headers
                     // end of MOO header
                     if (msg.request_id === undefined) {
                         this.logger.log('MOO: missing Request-Id header: ', msg);
-                        ret.is_error = true;
-                        return ret;
+                        return undefined;
                     }
-                    e++;
-                    if (msg.content_length > 0) {
-                        if ((e + msg.content_length) > buf.length) {
-                            this.logger.log("MOO: reached end of buffer while reading body");
-                            return ret;
+                    if (msg.content_length === undefined) {
+                        if (msg.content_type) {
+                            this.logger.log("MOO: bad message; has Content-Type but not Content-Length: ", msg);
+                            return undefined;
                         }
-                        
-                        if (msg.content_type == "application/json") {
-                            var json = buf.toString('utf8', e, e+msg.content_length);
-                            try {
-                                msg.body = JSON.parse(json);
-                            } catch (e) {
-                                this.logger.log("MOO: bad json body: ", json, msg);
-                                ret.is_error = true;
-                                return ret;
-                            }
-                        } else {
-                          msg.body = buf.slice(e, e + msg.content_length);
+                        if (e != buf.length - 1) {
+                            this.logger.log("MOO: bad message; has no Content-Length, but data after headers: ", msg);
+                            return undefined;
                         }
-                        ret.bytes_consumed = e + msg.content_length;
+
                     } else {
-                        ret.bytes_consumed = e;
+                        if (msg.content_length > 0) {
+                            if (!msg.content_type) {
+                                this.logger.log("MOO: bad message; has Content-Length but not Content-Type: ",  msg);
+                                return undefined;
+                            } else if (msg.content_type == "application/json") {
+                                var json = buf.toString('utf8', e+1, e+1+msg.content_length);
+                                try {
+                                    msg.body = JSON.parse(json);
+                                } catch (e) {
+                                    this.logger.log("MOO: bad json body: ", json, msg);
+                                    return undefined;
+                                }
+                            } else {
+                                msg.body = buf.slice(e+1, e+1+msg.content_length);
+                            }
+                        }
                     }
-                    ret.msg = msg;
-                    ret.is_complete = true;
-		    return ret;
+		    return msg;
                 } else {
                     // parse MOO header line
                     var line = buf.toString('utf8', s, e);
@@ -149,9 +150,8 @@ Moo.prototype.parse = function(buf) {
                         else
                             msg.headers[matches[1]] = matches[2];
                     } else {
-                        this.logger.log("MOO: bad header: ", line, msg);
-                        ret.is_error = true;
-                        return ret;
+                        this.logger.log("MOO: bad header line: ", line, msg);
+                        return undefined;
                     }
                 }
             } else {
@@ -166,35 +166,38 @@ Moo.prototype.parse = function(buf) {
                             msg.service = matches[1];
                             msg.name = matches[2];
                         } else {
-                            this.logger.log("MOO: bad request header: ", line, msg);
-                            ret.is_error = true;
-                            return ret;
+                            this.logger.log("MOO: bad first line: ", line, msg);
+                            return undefined;
                         }
                     } else {
                         msg.name = matches[3];
                     }
                     state = 'header';
                 } else {
-                    this.logger.log("MOO: bad header: ", line, msg);
-                    ret.is_error = true;
-                    return ret;
+                    this.logger.log("MOO: bad first line: ", line, msg);
+                    return undefined;
                 }
             }
             s = e+1;
         }
         e++;
     }
-    this.logger.log("MOO: reached end of buffer while parsing header");
-    return ret;
+    this.logger.log("MOO: message lacks newline in header");
+    return undefined;
 };
 
 Moo.prototype.handle_response = function(msg, body) {
-    let cb = this.requests[msg.request_id].cb;
-    if (cb) cb(msg, body);
+    let req = this.requests[msg.request_id];
+    if (!req) {
+        this.logger.log("MOO: can not handle RESPONSE due to unknown Request-Id: ", msg);
+        return false;
+    }
+    if (req.cb) req.cb(msg, body);
     if (msg.verb == "COMPLETE") delete(this.requests[msg.request_id]);
+    return true;
 };
 
-Moo.prototype.close = function() {
+Moo.prototype.clean_up = function() {
     Object.keys(this.requests).forEach(e => {
 	let cb = this.requests[e].cb;
 	if (cb) cb();
