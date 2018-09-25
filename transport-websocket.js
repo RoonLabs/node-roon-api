@@ -3,8 +3,6 @@
 // polyfill websockets in Node
 if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
-var Moo = require('./moo.js');
-
 function Transport(ip, port, logger) {
     var host = ip + ":" + port;
     this.ws = new WebSocket('ws://' + host + '/api');
@@ -12,7 +10,7 @@ function Transport(ip, port, logger) {
     this.logger = logger;
     
     this.ws.onopen = () => {
-        this.moo = new Moo(this);
+        this._isonopencalled = true;
         this.onopen();
     };
 
@@ -21,7 +19,7 @@ function Transport(ip, port, logger) {
     };
 
     this.ws.onmessage = (event) => {
-        if (!this.moo) return;
+        if (!this._isopencalled) return;
         var msg = this.moo.parse(event.data);
         if (!msg) {
             this.close();
@@ -41,9 +39,12 @@ Transport.prototype.close = function() {
         this.ws = undefined;
     }
 
-    if (this.moo) {
+    if (!this._onclosecalled && this._isopencalled) {
+        this._onclosecalled = true;
         this.onclose();
+    }
 
+    if (this.moo) {
         this.moo.close();
         this.moo = undefined;
     }

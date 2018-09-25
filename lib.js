@@ -37,6 +37,7 @@ Roon API.
  */
 
 var WSTransport = require('./transport-websocket.js'),
+    Moo         = require('./moo.js'),
     MooMessage  = require('./moomsg.js'),
     Core        = require('./core.js');
 
@@ -352,10 +353,9 @@ RoonApi.prototype.register_service = function(svcname, spec) {
  * @param {RoonApi~onclose} [options.onclose] - Called once when connect to host is lost
  */
 RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
-    let transport = new WSTransport(host, port, this.logger);
-    let moo = new Moo(transport);
+    let moo = new Moo(new WSTransport(host, port, this.logger));
 
-    transport.onopen = () => {
+    moo.transport.onopen = () => {
         //        this.logger.log("OPEN");
 
         moo.send_request("com.roonlabs.registry:1/info",
@@ -371,7 +371,7 @@ RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
 			     });
     };
 
-    transport.onclose = () => {
+    moo.transport.onclose = () => {
 //        this.logger.log("CLOSE");
         Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, moo.mooid));
         moo.clean_up();
@@ -380,14 +380,14 @@ RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
     };
 
     /*
-    transport.onerror = err => {
+    moo.transport.onerror = err => {
 //        this.logger.log("ERROR", err);
 	if (moo) moo.close();
 	moo = undefined;
-        transport.close();
+        moo.transport.close();
     };*/
 
-    transport.onmessage = msg => {
+    moo.transport.onmessage = msg => {
 //        this.logger.log("GOTMSG");
         var body = msg.body;
         delete(msg.body);
@@ -404,7 +404,7 @@ RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
         } else {
             if (msg.log) this.logger.log('<-', msg.verb, msg.request_id, msg.name, body ? JSON.stringify(body) : "");
             if (!moo.handle_response(msg, body)) {
-                transport.close(); // this will trigger the above onclose handler
+                moo.transport.close(); // this will trigger the above onclose handler
             }
         }
     };

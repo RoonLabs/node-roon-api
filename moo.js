@@ -2,6 +2,7 @@
 
 function Moo(transport) {
     this.transport = transport;
+    this.transport.moo = this;
     this.reqid = 0;
     this.subkey = 0;
     this.requests = {};
