@@ -44,7 +44,7 @@ Transport.prototype.close = function() {
     }
 
     if (this.moo) {
-        this.moo.close();
+        this.moo.clean_up();
         this.moo = undefined;
     }
 };
