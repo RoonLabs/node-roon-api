@@ -5,8 +5,6 @@ set -ex
 REPO=`git config remote.origin.url`
 SSH_REPO=${REPO/https:\/\/github.com\//git@github.com:}
 
-git checkout master
-
 rm -rf other
 mkdir other
 cd other
@@ -22,6 +20,7 @@ cd ..
 
 mkdir -p docs
 jsdoc *.js other/*/*.js -d docs
+
 git add docs
 
 git commit -m "Deploy to GitHub Pages"
