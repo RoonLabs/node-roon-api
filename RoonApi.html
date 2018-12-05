@@ -28,7 +28,7 @@
 
 <header>
     
-        <h2>RoonApi</h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>RoonApi<span class="signature">(desc)</span><span class="type-signature"></span></h2>
         
     
 </header>
@@ -40,7 +40,9 @@
 
     
 
+    
     <h4 class="name" id="RoonApi"><span class="type-signature"></span>new RoonApi<span class="signature">(desc)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -282,6 +284,37 @@
 
         <tr>
             
+                <td class="name"><code>log_level</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">How much logging information to print.  "all" for all messages, "none" for no messages, anything else for all messages not tagged as "quiet" by the Roon core.</td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>core_paired</code></td>
             
 
@@ -481,6 +514,8 @@
 
 
 
+
+
     
     </div>
 
@@ -490,7 +525,9 @@
 
     
 
-     
+    
+
+    
 
     
 
@@ -504,7 +541,9 @@
 
     
 
+    
     <h4 class="name" id="init_services"><span class="type-signature"></span>init_services<span class="signature">(services)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -734,7 +773,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line97">line 97</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line112">line 112</a>
     </li></ul></dd>
     
 
@@ -760,12 +799,16 @@
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="load_config"><span class="type-signature"></span>load_config<span class="signature">(key)</span><span class="type-signature"> &rarr; {object}</span></h4>
+    
 
     
 
@@ -865,7 +908,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line221">line 221</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line257">line 257</a>
     </li></ul></dd>
     
 
@@ -913,12 +956,16 @@
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="save_config"><span class="type-signature"></span>save_config<span class="signature">(key, value)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -1041,7 +1088,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line199">line 199</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line235">line 235</a>
     </li></ul></dd>
     
 
@@ -1067,12 +1114,16 @@
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="start_discovery"><span class="type-signature"></span>start_discovery<span class="signature">()</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -1123,7 +1174,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line174">line 174</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line198">line 198</a>
     </li></ul></dd>
     
 
@@ -1133,6 +1184,269 @@
 
     
 </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="ws_connect"><span class="type-signature"></span>ws_connect<span class="signature">(options)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    If not using Roon discovery, call this to connect to the Core via a websocket.
+</div>
+
+
+
+
+
+
+
+    <h5>This:</h5>
+    <ul><li><a href="RoonApi.html">RoonApi</a></li></ul>
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>host</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">hostname or ip to connect to</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>port</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">port to connect to</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>onclose</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="RoonApi.html#~onclose">RoonApi~onclose</a></span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Called once when connect to host is lost</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line362">line 362</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
 
 
 
@@ -1160,7 +1474,9 @@
 
     
 
+    
     <h4 class="name" id="~core_found"><span class="type-signature"></span>core_found<span class="signature">(core)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -1256,7 +1572,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line25">line 25</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line26">line 26</a>
     </li></ul></dd>
     
 
@@ -1282,12 +1598,16 @@
 
 
 
+
+
             
                 
 
     
 
+    
     <h4 class="name" id="~core_lost"><span class="type-signature"></span>core_lost<span class="signature">(core)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -1383,7 +1703,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line29">line 29</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line30">line 30</a>
     </li></ul></dd>
     
 
@@ -1409,12 +1729,16 @@
 
 
 
+
+
             
                 
 
     
 
+    
     <h4 class="name" id="~core_paired"><span class="type-signature"></span>core_paired<span class="signature">(core)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -1510,7 +1834,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line17">line 17</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line18">line 18</a>
     </li></ul></dd>
     
 
@@ -1536,12 +1860,16 @@
 
 
 
+
+
             
                 
 
     
 
+    
     <h4 class="name" id="~core_unpaired"><span class="type-signature"></span>core_unpaired<span class="signature">(core)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -1637,7 +1965,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line21">line 21</a>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line22">line 22</a>
     </li></ul></dd>
     
 
@@ -1647,6 +1975,90 @@
 
     
 </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+                
+
+    
+
+    
+    <h4 class="name" id="~onclose"><span class="type-signature"></span>onclose<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="lib.js.html">lib.js</a>, <a href="lib.js.html#line35">line 35</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
 
 
 
@@ -1677,13 +2089,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Output.html">Output</a></li><li><a href="RoonApi.html">RoonApi</a></li><li><a href="RoonApiImage.html">RoonApiImage</a></li><li><a href="RoonApiTransport.html">RoonApiTransport</a></li><li><a href="Zone.html">Zone</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Item.html">Item</a></li><li><a href="List.html">List</a></li><li><a href="Output.html">Output</a></li><li><a href="RoonApi.html">RoonApi</a></li><li><a href="RoonApiBrowse.html">RoonApiBrowse</a></li><li><a href="RoonApiImage.html">RoonApiImage</a></li><li><a href="RoonApiTransport.html">RoonApiTransport</a></li><li><a href="Zone.html">Zone</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Fri Apr 14 2017 15:27:26 GMT+0000 (UTC)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Dec 05 2018 12:31:10 GMT-0500 (EST)
 </footer>
 
 <script> prettyPrint(); </script>

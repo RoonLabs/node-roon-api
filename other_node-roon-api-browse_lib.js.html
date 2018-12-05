@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: other/node-roon-api-browse/lib.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: other/node-roon-api-browse/lib.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use strict";
+
+/**
+ * Roon API Browse Service: List
+ * @class List
+ * @property {string}  title            Title for this level
+ * @property {int}     count            Number of items in this level
+ * @property {string} [subtitle]        Subtitle in this level
+ * @property {string} [image_key]
+ * @property {int}     level            increases from 0 
+ * @property {int}    [display_offset]  stored display offset for this list
+ * @property {string} [hint]            A hint about what this list is
+ * &lt;pre>
+ *            Possible values include:
+ *                * `null`                 Display as a generic list
+ *                * `"action_list"`        Display as an action list
+ *
+ *            Please make sure that your implementations allow for hints to be added in the future. If you see
+ *            a hint that you do not recognize, treat it as a `null`
+ * &lt;/pre>
+ */
+
+/**
+ * Roon API Browse Service: Item
+ * @class Item
+ * @property {string}  title           Title for this item
+ * @property {string} [subtitle]       Subtitle for this item
+ * @property {string} [image_key]      Image for this item. 
+ * @property {string} [item_key]       Pass this into a `browse` request when the user selects this item
+ * @property {string} [hint]           A hint about what this item is
+ * &lt;pre>
+ *            Possible values include:
+ *                * `null`                 Unknown--display item generically
+ *                * `"action"`             This item is an action                           
+ *                * `"action_list"`        This item will load a list of actions at the next level
+ *                * `"list"`               This item will load a list at the next level
+ *                * `"header"`             A display-only header with no click action
+ *
+ *            Please make sure that your implementations allow for hints to be added in the future. If you see
+ *            a hint that you do not recognize, treat it as a `null`
+ *
+ *        list hint = null | action_list
+ *        item hint = null | action | action_list | list | header
+ *&lt;/pre>
+ * @property {object} [input_prompt]    If loading this item requires user input, then input_prompt will be populated.
+ *
+ * @property {string}  input_prompt.prompt                The prompt to display to the user: e.g. "Search Albums"
+ * @property {string}  input_prompt.action                The verb that goes with this action. This should be displayed on a button adjacent to the input. e.g. "Go" 
+ * @property {string} [input_prompt.value]                If non-null, then the value should be pre-populated
+ * @property {bool}    input_prompt.is_password           If true, then this should be displayed as a password input
+ */
+
+/**
+ * @callback RoonApiBrowse~browseresultcallback
+ * @param {string | false} error - an error code or false if no error
+ * @param {object} body
+ * @param {string} body.action The action that the client should take as a result of this load
+ * &lt;pre>
+ *                Possible values include:
+ *
+ *                 * "message"                - Display an message to the user, see the `message` and `is_error` properties
+ *                 * "none"                   - No action is required
+ *                 * "list"                   - The current list or its contents have changed. See the `list` property for the new level, and load items using the `load` request
+ *                 * "replace_item"           - Replace the selected item with the item in the `item` property
+ *                 * "remove_item"            - Remove the selected item
+ * &lt;/pre>
+ * @param {Item}       [body.item]                 When the action is "replace_item", this is the replacement item
+ * @param {List}       [body.list]                 When the action is "list", this represents the current list 
+ * @param {string}     [body.message]       When the action is 'message', this is the message to display
+ * @param {bool}       [body.is_error]      When the action is 'message', this indicates whether the message represents an error or not
+ */
+
+/**
+ * @callback RoonApiBrowse~loadresultcallback
+ * @param {string | false} error - an error code or false if no error
+ * @param {object} body
+ * @param {Item[]}     body.items
+ * @param {number}     body.offset
+ * @param {List}       body.list
+ */
+
+/**
+ * Roon API Browse service.  The browse service allows you to present a hierarchical, list-based user interface for Roon.
+ *
+ * &lt;p>Your browsing session is maintained on Roon's side, facilitating minimally stateful clients.&lt;/p>
+ *
+ * &lt;p>## Sessions&lt;/p>
+ *
+ * &lt;p>In order to facilitate minimally stateful clients and avoid situations where large amounts of data need to be sent at once, the browse session state is maintained on the server (Roon Core) side. &lt;p>
+ *
+ * &lt;p> Requests to the browse service accept two arguments:
+ * &lt;ul style="list-style: none;">
+ *     &lt;li> `hierarchy` which identifies the hierarchy being browsed &lt;/p>
+ *     &lt;li> `multi_session_key`, which enables an extensions to browse multiple instances of the same hierarchy at once. Most applications should not use `multi_session_key`. &lt;/ul>&lt;/p>
+ *
+ * &lt;p>Keep in mind when integrating with this API that in most cases, it will be better for the user to remember their last browsing position. In other cases where starting the browse from the toplevel is more appropriate, call the &lt;tt>browse&lt;/tt> method with &lt;tt>opts.pop_all&lt;/tt> set to &lt;tt>true&lt;/tt>&lt;/p>
+ *
+ * &lt;p>## The Browse Stack&lt;/p>
+ *
+ * &lt;p>Roon keeps track your browse stack, which consists of one or more _levels_.&lt;/p>
+ *
+ * &lt;p>Levels are numbered starting from 0 (the top level). The level number increases as the user "drills down".&lt;/p>
+ * 
+ * @class RoonApiBrowse
+ * @param {Core} core - The Core providing the service
+ */
+
+let SVCNAME = "com.roonlabs.browse:1";
+
+function RoonApiBrowse(core) {
+    this.core = core;
+}
+
+RoonApiBrowse.services = [ { name: SVCNAME } ];
+
+/**
+ * Perform a browsing operation.  Use this when the user selects an `Item`
+ *
+ * @param {object} opts - Options. If none, specify empty object ({}).
+ * @param {string} opts.hierarchy         The hierarchy is being browsed. 
+ *&lt;pre>
+ *            The following values are currently supported:
+ *
+ *             * "browse" -- If you are exposing a general-purpose browser, this is what you should use
+ *             * "playlists" 
+ *             * "settings" 
+ *             * "internet_radio"
+ *             * "albums"
+ *             * "artists"
+ *             * "genres"
+ *             * "composers"
+ *             * "search"
+ *&lt;/pre>
+ * @param {string}  [opts.multi_session_key]        If your application browses several instances of the same hierarchy at the same time, you can populate this to distinguish between them. Most applications will omit this field.
+ *
+ * @param {string}  [opts.item_key]            The key from an `Item` If you omit this, the most recent level will be re-loaded.
+ * @param {string}  [opts.input]               Input from the input box
+ * @param {string}  [opts.zone_or_output_id]   Zone ID. This is required for any playback-related functionality to work.
+ * @param {bool}    [opts.pop_all]             True to pop all levels but the first
+ * @param {int}     [opts.pop_levels]          If set, pop n levels
+ * @param {bool}    [opts.refresh_list]        If set, refresh the list contents
+ *
+ * @param {int}     [opts.set_display_offset]  Update the display offset for the current list prior to performing the browse operation
+ *&lt;pre>
+ *            If true, then the session will be reset so that browsing begins from the root of the hierarchy. 
+ *            If this is false or unset, then the core will attempt to resume at the previous browsing position
+ *            It is not valid to provide `pop_all` and `item_key` at the same time
+ *&lt;/pre>
+ * @param {RoonApiBrowse~browseresultcallback} [cb] - Called on success or error
+ */
+RoonApiBrowse.prototype.browse = function(opts, cb) {
+    this.core.moo.send_request(SVCNAME+"/browse",
+                               opts,
+                               (msg, body) => {
+                                   if (cb)
+                                       cb(msg &amp;&amp; msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), body);
+                               });
+};
+
+/**
+ * Retrieve items from a browse level. Item loading is handled separately from browsing. This allows clients to load very large lists in very small increments if needed.
+ *
+ * @param {object}   opts - Options.
+ * @param {int}     [opts.set_display_offset] Update the display offset for the current list
+ * @param {int}     [opts.level]              Which level of the browse hierarchy to load from. Defaults to the current (deepest) level.
+ * @param {int}     [opts.offset]             Offset into the list where loading should begin. Defaults to 0.
+ * @param {int}     [opts.count]              Number of items to load. Defaults to 100.
+ * @param {string}   opts.hierarchy           The hierarchy is being browsed. See `browse` for a list of possible values
+ * @param {string}  [opts.multi_session_key]  If your application browses several instances of the same hierarchy at the same time, you can populate this to distinguish between them. Most applications will omit this field.
+ * @param {RoonApiBrowse~loadresultcallback} [cb] - Called on success or error
+ */
+RoonApiBrowse.prototype.load = function(opts, cb) {
+    this.core.moo.send_request(SVCNAME+"/load",
+                               opts,
+                               (msg, body) => {
+                                   if (cb)
+                                       cb(msg &amp;&amp; msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), body);
+                               });
+};
+
+exports = module.exports = RoonApiBrowse;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Item.html">Item</a></li><li><a href="List.html">List</a></li><li><a href="Output.html">Output</a></li><li><a href="RoonApi.html">RoonApi</a></li><li><a href="RoonApiBrowse.html">RoonApiBrowse</a></li><li><a href="RoonApiImage.html">RoonApiImage</a></li><li><a href="RoonApiTransport.html">RoonApiTransport</a></li><li><a href="Zone.html">Zone</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Dec 05 2018 12:31:10 GMT-0500 (EST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -28,7 +28,7 @@
         <article>
             <pre class="prettyprint source linenums"><code>"use strict";
 
-let SVCNAME = "com.roonlabs.transport:1";
+let SVCNAME = "com.roonlabs.transport:2";
 
 function oid(o) {
     if (typeof(o) == 'string') return o;
@@ -53,6 +53,8 @@ function zoid(zo) {
  * @property {boolean} is_pause_allowed - Indicates whether the "pause" control is supported
  * @property {boolean} is_play_allowed - Indicates whether the "play" control is supported
  * @property {boolean} is_seek_allowed - Indicates whether the "seek" control is supported
+ * @property {number} [queue_items_remaining] - Number of items in the play queue for this zone
+ * @property {number} [queue_time_remaining] - Number of seconds remaining in the play queue for this zone
  * @property {object}  [settings]               - The default values for parties.
  * @property {('loop'|'loop_one'|'disabled')} settings.loop - loop setting on the zone
  * @property {boolean}  settings.shuffle - indicates whether shuffle is enabled on the zone
@@ -62,14 +64,15 @@ function zoid(zo) {
  * @property {number}  [now_playing.length] - Length of media in seconds, if applicable
  * @property {string}  [now_playing.image_key] - Now-playing image
  * @property {object}  now_playing.one_line - Display text for one-line displays
- * @property {object}  now_playing.one_line.line1
+ * @property {string}  now_playing.one_line.line1
  * @property {object}  now_playing.two_line - Display text for two-line displays
- * @property {object}  now_playing.two_line.line1
- * @property {object}  [now_playing.two_line.line2]
+ * @property {string}  now_playing.two_line.line1
+ * @property {string}  [now_playing.two_line.line2]
  * @property {object}  now_playing.three_line - Display text for three-line displays
- * @property {object}  now_playing.three_line.line1
- * @property {object}  [now_playing.three_line.line2]
- * @property {object}  [now_playing.three_line.line3]
+ * @property {string}  now_playing.three_line.line1
+ * @property {string}  [now_playing.three_line.line2]
+ * @property {string}  [now_playing.three_line.line3]
+
  */
 
 /**
@@ -95,9 +98,10 @@ function zoid(zo) {
  *     { "type": "db",    "min": -80, "max": 10,  "value": 4,     "step": 1.0 }
  *     { "type": "number" "min": 0,   "max": 100, "value": 80,    "step": 1.0 }
  *     { "type": "number" "min": 1,   "max": 99,  "value": 65,    "step": 1.0 }
+ *     { "type": "incremental" }
  * &lt;/pre>
  * &lt;/pre>
- * @property {('number'|'db'|*)}  [volume.type] - If you receive an unanticipated value for this, treat it like "number"
+ * @property {('number'|'db'|'incremental'|*)}  [volume.type] - If you receive an unanticipated value for this, treat it like "number".  The "incremental" type represents a volume control that just has "+" and "-" buttons, with no feedback about the current volume value or its range. It might be used in conjunction with an IR blaster, for example. In this case, all of the remaining properties (min,max,step,value,is_muted,limits) will be absent. With an "incremental" control, you should display two buttons, and when issuing change_volume requests, use "relative" mode and only send adjustments of +1/-1.
  * @property {number}  [volume.min] - The minimum value in the volume range
  * @property {number}  [volume.max] - The maximum value in the volume range
  * @property {number}  [volume.value] - The current value of the volume control
@@ -112,6 +116,7 @@ function zoid(zo) {
  */
 function RoonApiTransport(core) {
     this.core = core;
+    this._queues = { };
 }
 
 RoonApiTransport.services = [ { name: SVCNAME } ];
@@ -362,14 +367,14 @@ RoonApiTransport.prototype.get_zones = function(cb) {
     this.core.moo.send_request(SVCNAME+"/get_zones",
                                (msg, body) => {
                                    if (cb)
-                                       cb(msg &amp;&amp; msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), msg.body);
+                                       cb(msg &amp;&amp; msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), body);
                                });
 };
 RoonApiTransport.prototype.get_outputs = function(cb) {
     this.core.moo.send_request(SVCNAME+"/get_outputs",
                                (msg, body) => {
                                    if (cb)
-                                       cb(msg &amp;&amp; msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), msg.body);
+                                       cb(msg &amp;&amp; msg.name == "Success" ? false : (msg ? msg.name : "NetworkError"), body);
                                });
 };
 
@@ -381,15 +386,49 @@ RoonApiTransport.prototype.subscribe_zones    = function(cb) {
                                             this._zones = msg.zones.reduce((p,e) => (p[e.zone_id] = e) &amp;&amp; p, {});
 
                                         } else if (response == "Changed") {
-                                            if (msg.zones_removed) msg.zones_removed.forEach(e => delete(this._zones[e.zone_id]));
-                                            if (msg.zones_added)   msg.zones_added  .forEach(e => this._zones[e.zone_id] = e);
-                                            if (msg.zones_changed) msg.zones_changed.forEach(e => this._zones[e.zone_id] = e);
-
+                                            if (msg.zones_removed)      msg.zones_removed.forEach(e => delete(this._zones[e.zone_id]));
+                                            if (msg.zones_added)        msg.zones_added  .forEach(e => this._zones[e.zone_id] = e);
+                                            if (msg.zones_changed)      msg.zones_changed.forEach(e => this._zones[e.zone_id] = e);
+                                            
+                                            if (msg.zones_seek_changed) msg.zones_seek_changed.forEach(e => {
+                                                let zone = this._zones[e.zone_id];
+                                                if (zone == undefined) return;
+                                                if (zone.now_playing != undefined) zone.now_playing.seek_position = e.seek_position
+                                                zone.queue_time_remaining = e.queue_time_remaining;
+                                            });
+                                            
                                         } else if (response == "Unsubscribed") {
                                             delete(this._zones);
                                         }
                                         cb(response, msg);
                                     });
+}
+
+RoonApiTransport.prototype.subscribe_queue = function(zone_or_output, max_item_count, cb) {
+    var zone_or_output_id = zoid(zone_or_output);
+    return this.core.moo._subscribe_helper(SVCNAME, "queue",
+                                           {
+                                               zone_or_output_id: zone_or_output_id,
+                                               max_item_count: max_item_count
+                                           },
+                                           (response, msg) => {
+                                               cb(response, msg);
+                                           });
+}
+
+RoonApiTransport.prototype.play_from_here = function(zone_or_output, queue_item_id, cb) {
+    var zone_or_output_id = zoid(zone_or_output);
+    var req_args = {
+        zone_or_output_id: zone_or_output_id,
+        queue_item_id: queue_item_id
+    };
+    this.core.moo.send_request(SVCNAME+"/play_from_here",
+                               req_args,
+                               (msg, body) => {
+                                   if (cb)
+                                       cb(msg, body);
+                                   
+                               });
 }
 
 RoonApiTransport.prototype.zone_by_zone_id = function(zone_id) {
@@ -419,13 +458,13 @@ exports = module.exports = RoonApiTransport;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Output.html">Output</a></li><li><a href="RoonApi.html">RoonApi</a></li><li><a href="RoonApiImage.html">RoonApiImage</a></li><li><a href="RoonApiTransport.html">RoonApiTransport</a></li><li><a href="Zone.html">Zone</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Item.html">Item</a></li><li><a href="List.html">List</a></li><li><a href="Output.html">Output</a></li><li><a href="RoonApi.html">RoonApi</a></li><li><a href="RoonApiBrowse.html">RoonApiBrowse</a></li><li><a href="RoonApiImage.html">RoonApiImage</a></li><li><a href="RoonApiTransport.html">RoonApiTransport</a></li><li><a href="Zone.html">Zone</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.3</a> on Fri Apr 14 2017 15:27:26 GMT+0000 (UTC)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Dec 05 2018 12:31:10 GMT-0500 (EST)
 </footer>
 
 <script> prettyPrint(); </script>
