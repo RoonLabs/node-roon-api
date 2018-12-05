@@ -386,9 +386,9 @@ and optionally you can pass a callback to call upon disconnection (for retrying
 the connection). Unfortunately, this means your web app will probably need an
 input for the IP address of the Roon Core.
 
-The best way to use this API is to use [browserify](http://browserify.org/) +
-[partialify](https://github.com/bclinkinbeard/partialify) to combine your
-html/js/css and the entire Roon API into 1 large `bundle.js` file.
+The best way to use this API is to use a bundler (like
+[parcel](https://parceljs.org/) or browserify or webpack) to combine your
+html/js/css and the entire Roon API into 1 large javascript file.
 
 For an example, see the [web test
 app](http://github.com/roonlabs/roon-extension-web-testapp).
