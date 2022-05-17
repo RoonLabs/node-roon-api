@@ -10,6 +10,7 @@ Roon API.
  * @param {string} desc.publisher - The name of the developer of the extension.
  * @param {string} desc.website - Website for more information about the extension.
  * @param {string} desc.log_level - How much logging information to print.  "all" for all messages, "none" for no messages, anything else for all messages not tagged as "quiet" by the Roon core.
+ * @param {string} desc.force_server - Force app into NodeJS mode (usaully can auto-detect, but may not be able to do it properly in Electron).
  * @param {RoonApi~core_paired} [desc.core_paired] - Called when Roon pairs you.
  * @param {RoonApi~core_unpaired} [desc.core_unpaired] - Called when Roon unpairs you.
  * @param {RoonApi~core_found} [desc.core_found] - Called when a Roon Core is found. Usually, you want to implement pairing instead of using this.
@@ -98,6 +99,103 @@ function RoonApi(o) {
     this.log_level = o.log_level;
     this.extension_opts = o;
     this.is_paired = false;
+
+    // - pull in Sood and provide discovery methods in Node, but not in WebBrowser
+    //
+    // - implement save_config/load_config based on:
+    //      Node:       require('fs')
+    //      WebBrowser: localStroage
+    //
+    if (o.force_server || typeof(window) == "undefined" || typeof(nw) !== "undefined") {
+        /**
+        * Begin the discovery process to find/connect to a Roon Core.
+        */
+        RoonApi.prototype.start_discovery = function() {
+            if (this._sood) return;
+            this._sood = require('./sood.js')(this.logger);
+            this._sood_conns = {};
+            this._sood.on('message', msg => {
+    //	    this.logger.log(msg);
+                if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
+                    if (this._sood_conns[msg.props.unique_id]) return;
+                    this._sood_conns[msg.props.unique_id] = true;
+                    this.ws_connect({ host: msg.from.ip, port: msg.props.http_port, onclose: () => { delete(this._sood_conns[msg.props.unique_id]); } });
+                }
+            });
+            this._sood.on('network', () => {
+                this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+            });
+            this._sood.start(() => {
+                this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+                setInterval(() => this.periodic_scan(), (10 * 1000));
+                this.scan_count = -1;
+            });
+        };
+
+        RoonApi.prototype.periodic_scan = function() {
+            this.scan_count += 1;
+            if (this.is_paired) return;
+            if ((this.scan_count < 6) || ((this.scan_count % 6) == 0)) {
+                this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+            }
+        };
+
+        var fs = ((typeof _fs) === 'undefined') ? require('fs') : _fs;
+
+        /**
+        * Save a key value pair in the configuration data store.
+        * @param {string} key
+        * @param {object} value
+        */
+        RoonApi.prototype.save_config = function(k, v) {
+            try {
+                let config;
+                try {
+                    let content = fs.readFileSync("config.json", { encoding: 'utf8' });
+                    config = JSON.parse(content) || {};
+                } catch (e) {
+                    config = {};
+                } 
+                if (v === undefined || v === null)
+                    delete(config[k]);
+                else
+                    config[k] = v;
+                fs.writeFileSync("config.json", JSON.stringify(config, null, '    '));
+            } catch (e) { }
+        };
+
+        /**
+        * Load a key value pair in the configuration data store.
+        * @param {string} key
+        * @return {object} value
+        */
+        RoonApi.prototype.load_config = function(k) {
+            try {
+                let content = fs.readFileSync("config.json", { encoding: 'utf8' });
+                return JSON.parse(content)[k];
+            } catch (e) {
+                return undefined;
+            }
+        };
+
+    } else {
+        RoonApi.prototype.save_config = function(k, v) {
+            if (v === undefined || v === null)
+                localStorage.removeItem(k);
+            else
+                localStorage.setItem(k, JSON.stringify(v));
+        };
+        RoonApi.prototype.load_config = function(k) {
+            try {
+                let r = localStorage.getItem(k);
+                return r ? JSON.parse(r) : undefined;
+            } catch (e) {
+                return undefined;
+            }
+        };
+    }
+
+
 }
 
  /**
@@ -184,101 +282,6 @@ RoonApi.prototype.init_services = function(o) {
 
     this.services_opts = o;
 };
-
-// - pull in Sood and provide discovery methods in Node, but not in WebBrowser
-//
-// - implement save_config/load_config based on:
-//      Node:       require('fs')
-//      WebBrowser: localStroage
-//
-if (typeof(window) == "undefined" || typeof(nw) !== "undefined") {
-    /**
-     * Begin the discovery process to find/connect to a Roon Core.
-     */
-    RoonApi.prototype.start_discovery = function() {
-	if (this._sood) return;
-	this._sood = require('./sood.js')(this.logger);
-        this._sood_conns = {};
-        this._sood.on('message', msg => {
-//	    this.logger.log(msg);
-            if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
-                if (this._sood_conns[msg.props.unique_id]) return;
-                this._sood_conns[msg.props.unique_id] = true;
-                this.ws_connect({ host: msg.from.ip, port: msg.props.http_port, onclose: () => { delete(this._sood_conns[msg.props.unique_id]); } });
-            }
-        });
-        this._sood.on('network', () => {
-            this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
-        });
-        this._sood.start(() => {
-	    this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
-            setInterval(() => this.periodic_scan(), (10 * 1000));
-            this.scan_count = -1;
-	});
-    };
-
-    RoonApi.prototype.periodic_scan = function() {
-        this.scan_count += 1;
-        if (this.is_paired) return;
-        if ((this.scan_count < 6) || ((this.scan_count % 6) == 0)) {
-            this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
-        }
-    };
-
-    var fs = ((typeof _fs) === 'undefined') ? require('fs') : _fs;
-
-    /**
-     * Save a key value pair in the configuration data store.
-     * @param {string} key
-     * @param {object} value
-     */
-    RoonApi.prototype.save_config = function(k, v) {
-        try {
-            let config;
-            try {
-                let content = fs.readFileSync("config.json", { encoding: 'utf8' });
-                config = JSON.parse(content) || {};
-            } catch (e) {
-                config = {};
-            } 
-            if (v === undefined || v === null)
-                delete(config[k]);
-            else
-                config[k] = v;
-            fs.writeFileSync("config.json", JSON.stringify(config, null, '    '));
-        } catch (e) { }
-    };
-
-    /**
-     * Load a key value pair in the configuration data store.
-     * @param {string} key
-     * @return {object} value
-     */
-    RoonApi.prototype.load_config = function(k) {
-        try {
-            let content = fs.readFileSync("config.json", { encoding: 'utf8' });
-            return JSON.parse(content)[k];
-        } catch (e) {
-            return undefined;
-        }
-    };
-
-} else {
-    RoonApi.prototype.save_config = function(k, v) {
-        if (v === undefined || v === null)
-            localStorage.removeItem(k);
-        else
-            localStorage.setItem(k, JSON.stringify(v));
-    };
-    RoonApi.prototype.load_config = function(k) {
-        try {
-            let r = localStorage.getItem(k);
-            return r ? JSON.parse(r) : undefined;
-        } catch (e) {
-            return undefined;
-        }
-    };
-}
 
 RoonApi.prototype.register_service = function(svcname, spec) {
     let ret = {
