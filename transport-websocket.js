@@ -4,8 +4,10 @@
 if (typeof(WebSocket) == "undefined") global.WebSocket = require('ws');
 
 function Transport(ip, port, logger) {
-    var host = ip + ":" + port;
-    this.ws = new WebSocket('ws://' + host + '/api');
+    this.host = ip;
+    this.port = port;
+
+    this.ws = new WebSocket("ws://" + ip + ":" + port + "/api");
     if (typeof(window) != "undefined") this.ws.binaryType = 'arraybuffer';
     this.logger = logger;
     
