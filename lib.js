@@ -115,11 +115,22 @@ function RoonApi(o) {
             this._sood = require('./sood.js')(this.logger);
             this._sood_conns = {};
             this._sood.on('message', msg => {
-    //	    this.logger.log(msg);
+                //this.logger.log(msg);
                 if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
-                    if (this._sood_conns[msg.props.unique_id]) return;
-                    this._sood_conns[msg.props.unique_id] = true;
-                    this.ws_connect({ host: msg.from.ip, port: msg.props.http_port, onclose: () => { delete(this._sood_conns[msg.props.unique_id]); } });
+                    if (this._sood_conns[msg.props.unique_id]) {
+                        if (this._sood_conns[msg.props.unique_id].transport.host == msg.from.ip) {
+                            return;
+                        } else {
+                            this._sood_conns[msg.props.unique_id].transport.close();
+                        }
+                    }
+                    this._sood_conns[msg.props.unique_id] = this.ws_connect({
+                        host: msg.from.ip,
+                        port: msg.props.http_port,
+                        onclose: () => {
+                            delete(this._sood_conns[msg.props.unique_id]);
+                        }
+                    });
                 }
             });
             this._sood.on('network', () => {
