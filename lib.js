@@ -15,6 +15,7 @@ Roon API.
  * @param {RoonApi~core_unpaired} [desc.core_unpaired] - Called when Roon unpairs you.
  * @param {RoonApi~core_found} [desc.core_found] - Called when a Roon Core is found. Usually, you want to implement pairing instead of using this.
  * @param {RoonApi~core_lost} [desc.core_lost] - Called when Roon Core is lost. Usually, you want to implement pairing instead of using this.
+ * @param {RoonApi~onerror} [desc.moo_onerror] - Called when there is an error on the connection to a core.
  */
 /**
  * @callback RoonApi~core_paired
@@ -35,6 +36,11 @@ Roon API.
 
 /**
  * @callback RoonApi~onclose
+ */
+
+/**
+ * @callback RoonApi~onerror
+ * @param {Moo} moo connection object
  */
 
 var WSTransport = require('./transport-websocket.js'),
@@ -82,6 +88,7 @@ function RoonApi(o) {
     if (o.core_lost     && typeof(o.core_lost)     != "function") throw new Error("Roon Extensions options has a .core_lost which is not a function");
     if (o.core_paired   && typeof(o.core_paired)   != "function") throw new Error("Roon Extensions options has a .core_paired which is not a function");
     if (o.core_unpaired && typeof(o.core_unpaired) != "function") throw new Error("Roon Extensions options has a .core_unpaired which is not a function");
+    if (o.moo_onerror && typeof(o.moo_onerror) != "function") throw new Error("Roon Extensions options has a .moo_onerror which is not a function");
 
     this.extension_reginfo = {
         extension_id:      o.extension_id,
@@ -129,6 +136,9 @@ function RoonApi(o) {
                         port: msg.props.http_port,
                         onclose: () => {
                             delete(this._sood_conns[msg.props.unique_id]);
+                        },
+                        onerror: (moo) => {
+                            if (this.extension_opts.moo_onerror) this.extension_opts.moo_onerror(moo);
                         }
                     });
                 }
@@ -372,8 +382,9 @@ RoonApi.prototype.register_service = function(svcname, spec) {
  * @param {string}          options.host - hostname or ip to connect to
  * @param {number}          options.port - port to connect to
  * @param {RoonApi~onclose} [options.onclose] - Called once when connect to host is lost
+ * @param {RoonApi~onerror} [options.onerror] - Called when there is a websocket error
  */
-RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
+RoonApi.prototype.ws_connect = function({ host, port, onclose, onerror }) {
     let moo = new Moo(new WSTransport(host, port, this.logger));
 
     moo.transport.onopen = () => {
@@ -400,13 +411,10 @@ RoonApi.prototype.ws_connect = function({ host, port, onclose }) {
         onclose = undefined;
     };
 
-    /*
     moo.transport.onerror = err => {
-//        this.logger.log("ERROR", err);
-	if (moo) moo.close();
-	moo = undefined;
-        moo.transport.close();
-    };*/
+        this.logger.log("ERROR", err);
+        onerror && onerror(moo);
+    };
 
     moo.transport.onmessage = msg => {
 //        this.logger.log("GOTMSG");

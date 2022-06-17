@@ -20,6 +20,10 @@ function Transport(ip, port, logger) {
         this.close();
     };
 
+    this.ws.onerror = (err) => {
+        this.onerror();
+    }
+
     this.ws.onmessage = (event) => {
         var msg = this.moo.parse(event.data);
         if (!msg) {
@@ -53,6 +57,7 @@ Transport.prototype.close = function() {
 
 Transport.prototype.onopen = function() { };
 Transport.prototype.onclose = function() { };
+Transport.prototype.onerror = function() { };
 Transport.prototype.onmessage = function() { };
 
 exports = module.exports = Transport;
