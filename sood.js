@@ -55,6 +55,14 @@ function _parse(buf, minfo) {
 	    }
 	    msg.props[name] = val;
 	}
+        if (msg.props["_replyaddr"]) {
+            msg.from.ip = msg.props["_replyaddr"];
+            delete msg.props["_replyaddr"];
+        }
+        if (msg.props["_replyport"]) {
+            msg.from.port = msg.props["_replyport"];
+            delete msg.props["_replyport"];
+        }
 	return msg;
 
     } catch (e) {
