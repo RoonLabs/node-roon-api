@@ -5,6 +5,7 @@ function Core(moo, roon, registration) {
     this.core_id = registration.core_id;
     this.display_name = registration.display_name;
     this.display_version = registration.display_version;
+    this.registration = registration;
     this.services = {};
 
     var svcs = {};
