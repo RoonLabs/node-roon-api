@@ -18,7 +18,6 @@ function Transport(ip, port, logger) {
     this.ws.onopen = () => {
         this.is_alive = true;
         this.interval = setInterval(() => {
-            console.log('heartbeat', this.is_alive);
             if (this.is_alive === false) return this.ws.terminate();
             this.is_alive = false;
             this.ws.ping();
