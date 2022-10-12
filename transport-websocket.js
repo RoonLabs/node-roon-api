@@ -7,16 +7,31 @@ function Transport(ip, port, logger) {
     this.host = ip;
     this.port = port;
 
+    this.interval = null;
+    this.is_alive = null;
+
     this.ws = new WebSocket("ws://" + ip + ":" + port + "/api");
     if (typeof(window) != "undefined") this.ws.binaryType = 'arraybuffer';
     this.logger = logger;
-    
+
+    this.ws.on('pong', () => this.is_alive = true);
     this.ws.onopen = () => {
+        this.is_alive = true;
+        this.interval = setInterval(() => {
+            console.log('heartbeat', this.is_alive);
+            if (this.is_alive === false) return this.ws.terminate();
+            this.is_alive = false;
+            this.ws.ping();
+        }, 5000)
+
         this._isonopencalled = true;
         this.onopen();
     };
 
     this.ws.onclose = () => {
+        this.is_alive = false;
+        clearInterval(this.interval);
+        this.interval = null;
         this.close();
     };
 
