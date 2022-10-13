@@ -46,7 +46,8 @@ Roon API.
 var WSTransport = require('./transport-websocket.js'),
     Moo         = require('./moo.js'),
     MooMessage  = require('./moomsg.js'),
-    Core        = require('./core.js');
+    Core        = require('./core.js'),
+    os          = require('os');
 
 function Logger(roonapi) {
     this.roonapi = roonapi;
@@ -125,14 +126,22 @@ function RoonApi(o) {
                 //this.logger.log(msg);
                 if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
                     if (this._sood_conns[msg.props.unique_id]) {
-                        if (this._sood_conns[msg.props.unique_id].transport.host == msg.from.ip) {
-                            return;
-                        } else {
-                            this._sood_conns[msg.props.unique_id].transport.close();
+                        return;
+                    }
+
+                    let ip = msg.from.ip;
+                    let ni = os.networkInterfaces();
+                    for (let prot in ni) {
+                        for (let addr of ni[prot]) {
+                            if (ip === addr.address) {
+                                ip = '127.0.0.1';
+                                break
+                            }
                         }
                     }
+
                     this._sood_conns[msg.props.unique_id] = this.ws_connect({
-                        host: msg.from.ip,
+                        host: ip,
                         port: msg.props.http_port,
                         onclose: () => {
                             delete(this._sood_conns[msg.props.unique_id]);
