@@ -18,10 +18,13 @@ function Transport(ip, port, logger) {
     this.ws.onopen = () => {
         this.is_alive = true;
         this.interval = setInterval(() => {
-            if (this.is_alive === false) return this.ws.terminate();
+            if (this.is_alive === false) {
+                logger.log(`Roon API Connection to ${this.host}:${this.port} closed due to missed heartbeat`);
+                return this.ws.terminate();
+            }
             this.is_alive = false;
             this.ws.ping();
-        }, 5000)
+        }, 10000)
 
         this._isonopencalled = true;
         this.onopen();
