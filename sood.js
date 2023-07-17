@@ -1,3 +1,7 @@
+/*
+SOOD implements Roon Core discovery using UDP protocol
+ */
+
 "use strict";
 
 var util    = require("util"),
