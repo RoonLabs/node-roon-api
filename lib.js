@@ -16,6 +16,7 @@ Roon API.
  * @param {RoonApi~core_found} [desc.core_found] - Called when a Roon Core is found. Usually, you want to implement pairing instead of using this.
  * @param {RoonApi~core_lost} [desc.core_lost] - Called when Roon Core is lost. Usually, you want to implement pairing instead of using this.
  * @param {RoonApi~onerror} [desc.moo_onerror] - Called when there is an error on the connection to a core.
+ * @param {string} [desc.configDir] - The directory to store configuration files.
  */
 /**
  * @callback RoonApi~core_paired
@@ -107,6 +108,7 @@ function RoonApi(o) {
     this.log_level = o.log_level;
     this.extension_opts = o;
     this.is_paired = false;
+    this.configDir = o.configDir;
 
     // - pull in Sood and provide discovery methods in Node, but not in WebBrowser
     //
@@ -180,8 +182,9 @@ function RoonApi(o) {
         RoonApi.prototype.save_config = function(k, v) {
             try {
                 let config;
+                let configPath = this.configDir ? this.configDir + "/config.json" : "config.json";
                 try {
-                    let content = fs.readFileSync("config.json", { encoding: 'utf8' });
+                    let content = fs.readFileSync(configPath, { encoding: "utf8" });
                     config = JSON.parse(content) || {};
                 } catch (e) {
                     config = {};
@@ -190,7 +193,7 @@ function RoonApi(o) {
                     delete(config[k]);
                 else
                     config[k] = v;
-                fs.writeFileSync("config.json", JSON.stringify(config, null, '    '));
+                fs.writeFileSync(configPath, JSON.stringify(config, null, "    "));
             } catch (e) { }
         };
 
@@ -201,7 +204,8 @@ function RoonApi(o) {
         */
         RoonApi.prototype.load_config = function(k) {
             try {
-                let content = fs.readFileSync("config.json", { encoding: 'utf8' });
+                let configPath = this.configDir ? this.configDir + "/config.json" : "config.json";
+                let content = fs.readFileSync(configPath, { encoding: "utf8" });
                 return JSON.parse(content)[k];
             } catch (e) {
                 return undefined;
