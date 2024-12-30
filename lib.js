@@ -107,6 +107,8 @@ function RoonApi(o) {
     this.log_level = o.log_level;
     this.extension_opts = o;
     this.is_paired = false;
+    this.scan_count = -1;
+    this.scanIntervalId = 0;
 
     // - pull in Sood and provide discovery methods in Node, but not in WebBrowser
     //
@@ -119,48 +121,88 @@ function RoonApi(o) {
         * Begin the discovery process to find/connect to a Roon Core.
         */
         RoonApi.prototype.start_discovery = function() {
-            if (this._sood) return;
-            this._sood = require('./sood.js')(this.logger);
-            this._sood_conns = {};
-            this._sood.on('message', msg => {
-                //this.logger.log(msg);
-                if (msg.props.service_id == "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
-                    if (this._sood_conns[msg.props.unique_id]) {
-                        return;
-                    }
+            // check if discovery needs to be restarted after stop_discovery has been called
+            if (this._sood) {
+                if (this.scanIntervalId) {
+                    // ignore, function called multiple times without stop_discovery
+                    return;
+                }
+            } else {
+                // first start_discovery call: setup everything
+                this.logger.log("Setting up sood");
+                this._sood = require('./sood.js')(this.logger);
+                this._sood_conns = {};
+                this._sood.on('message', msg => {
+                    //this.logger.log(msg);
+                    if (msg.props.service_id === "00720724-5143-4a9b-abac-0e50cba674bb" && msg.props.unique_id) {
+                        if (this._sood_conns[msg.props.unique_id]) {
+                            return;
+                        }
 
-                    let ip = msg.from.ip;
-                    let ni = os.networkInterfaces();
-                    for (let prot in ni) {
-                        for (let addr of ni[prot]) {
-                            if (ip === addr.address) {
-                                ip = '127.0.0.1';
-                                break
+                        let ip = msg.from.ip;
+                        let ni = os.networkInterfaces();
+                        for (let prot in ni) {
+                            for (let addr of ni[prot]) {
+                                if (ip === addr.address) {
+                                    ip = '127.0.0.1';
+                                    break
+                                }
                             }
                         }
-                    }
 
-                    this._sood_conns[msg.props.unique_id] = this.ws_connect({
-                        host: ip,
-                        port: msg.props.http_port,
-                        onclose: () => {
-                            delete(this._sood_conns[msg.props.unique_id]);
-                        },
-                        onerror: (moo) => {
-                            if (this.extension_opts.moo_onerror) this.extension_opts.moo_onerror(moo);
-                        }
-                    });
-                }
-            });
-            this._sood.on('network', () => {
-                this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
-            });
+                        this._sood_conns[msg.props.unique_id] = this.ws_connect({
+                            host: ip,
+                            port: msg.props.http_port,
+                            onclose: () => {
+                                delete(this._sood_conns[msg.props.unique_id]);
+                            },
+                            onerror: (moo) => {
+                                if (this.extension_opts.moo_onerror) this.extension_opts.moo_onerror(moo);
+                            }
+                        });
+                    }
+                });
+                this._sood.on('network', () => {
+                    this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
+                });
+            }
+
+            this.logger.log("Starting sood");
             this._sood.start(() => {
                 this._sood.query({ query_service_id: "00720724-5143-4a9b-abac-0e50cba674bb" });
-                setInterval(() => this.periodic_scan(), (10 * 1000));
+                this.scanIntervalId = setInterval(() => this.periodic_scan(), (10 * 1000));
                 this.scan_count = -1;
             });
         };
+
+        /**
+         * Stop the discovery process to automatically connect to a Roon core.
+         *
+         * To restart the discovery process, call `start_discovery` again.
+         */
+        RoonApi.prototype.stop_discovery = function() {
+            if (this.scanIntervalId) {
+                clearInterval(this.scanIntervalId);
+                this.scanIntervalId = 0;
+            }
+            if (this._sood) {
+                this._sood.stop();
+            }
+        }
+
+        /**
+         * Disconnect all Roon core WebSocket connections.
+         *
+         * To remain disconnected, call `stop_discovery` first.
+         */
+        RoonApi.prototype.disconnect_all = function() {
+            if (this._sood_conns) {
+                Object.entries(this._sood_conns).forEach(([id, conn]) => {
+                    this.logger.log("Closing Roon connection: %s", id);
+                    conn.transport.close();
+                });
+            }
+        }
 
         RoonApi.prototype.periodic_scan = function() {
             this.scan_count += 1;

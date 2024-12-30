@@ -19,6 +19,7 @@ function Sood(logger) {
     this._unicast = {};
     this._iface_seq = 0;
     this.logger = logger;
+    this.interface_timer = 0;
 //    this.on("message", (msg) => { this.logger.log(JSON.stringify(msg)); });
 };
 
@@ -162,9 +163,8 @@ Sood.prototype.start = function(cb) {
     this.initsocket(cb);
 };
 Sood.prototype.stop = function() {
-    if (this.interface_timer) clearInterval(interface_timer);
-    delete(this.interface_timer);
-    for (ip in this._multicast) {
+    if (this.interface_timer) clearInterval(this.interface_timer);
+    for (const ip in this._multicast) {
 	try { this._multicast[ip].recv_sock.close(); } catch (e) { }
 	try { this._multicast[ip].send_sock.close(); } catch (e) { }
     }

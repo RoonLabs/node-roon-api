@@ -42,7 +42,10 @@ function Transport(ip, port, logger) {
     }
 
     this.ws.onmessage = (event) => {
-        var msg = this.moo.parse(event.data);
+        if (!this.moo) {
+            return;
+        }
+        const msg = this.moo.parse(event.data);
         if (!msg) {
             this.close();
             return;
@@ -57,6 +60,7 @@ Transport.prototype.send = function(buf) {
 
 Transport.prototype.close = function() {
     if (this.ws) {
+        clearInterval(this.interval);
         this.ws.close();
         this.ws = undefined;
     }
