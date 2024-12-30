@@ -284,11 +284,13 @@ RoonApi.prototype.init_services = function(o) {
 
 		    this.paired_core_id = core.core_id;
                     this.paired_core = core;
-                    this.is_paired = true;
 		    svc.send_continue_all("subscribe_pairing", "Changed", { paired_core_id: this.paired_core_id  })
 		}
-		if (core.core_id == this.paired_core_id)
+	    if (core.core_id == this.paired_core_id) {
+		    // make sure the periodic_scan is stopped after a re-connection to the same core
+		    this.is_paired = true;
 		    if (this.extension_opts.core_paired) this.extension_opts.core_paired(core);
+	    }
 	    },
 	    lost_core: core => {
 		if (core.core_id == this.paired_core_id)
@@ -398,6 +400,7 @@ RoonApi.prototype.ws_connect = function({ host, port, onclose, onerror }) {
 
     moo.transport.onopen = () => {
         //        this.logger.log("OPEN");
+        this.scan_count = -1;
 
         moo.send_request("com.roonlabs.registry:1/info",
 			     (msg, body) => {
@@ -414,6 +417,9 @@ RoonApi.prototype.ws_connect = function({ host, port, onclose, onerror }) {
 
     moo.transport.onclose = () => {
 //        this.logger.log("CLOSE");
+        // reset scan count for faster reconnect
+        this.scan_count = -1;
+
         Object.keys(this._service_request_handlers).forEach(e => this._service_request_handlers[e] && this._service_request_handlers[e](null, moo.mooid));
         moo.clean_up();
         onclose && onclose();
