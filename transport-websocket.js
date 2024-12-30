@@ -18,6 +18,10 @@ function Transport(ip, port, logger) {
     this.ws.onopen = () => {
         this.is_alive = true;
         this.interval = setInterval(() => {
+            if (!this.ws) {
+                this.close();
+                return;
+            }
             if (this.is_alive === false) {
                 logger.log(`Roon API Connection to ${this.host}:${this.port} closed due to missed heartbeat`);
                 return this.ws.terminate();
@@ -52,6 +56,10 @@ function Transport(ip, port, logger) {
 }
 
 Transport.prototype.send = function(buf) {
+    if (!this.ws) {
+        this.close();
+        return;
+    }
     this.ws.send(buf, { binary: true, mask: true});
 };
 
