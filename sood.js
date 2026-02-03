@@ -7,9 +7,14 @@ SOOD implements Roon Core discovery using UDP protocol
 var util    = require("util"),
     events  = require('events'),
     dgram   = require('dgram'),
-    IP      = require('ip'),
     uuid    = require('node-uuid'),
     os      = require('os');
+
+function getBroadcastAddress(ip, netmask) {
+    const ipParts = ip.split('.').map(Number);
+    const maskParts = netmask.split('.').map(Number);
+    return ipParts.map((octet, i) => octet | (~maskParts[i] & 255)).join('.');
+}
 
 var SOOD_PORT         = 9003;
 var SOOD_MULTICAST_IP = "239.255.90.90";
@@ -203,7 +208,7 @@ Sood.prototype._listen_iface = function(ip, netmask, ifacename) {
 //        this.logger.log(`SOOD: new sock: send ${ip}/${ifacename}`);
         new_iface = true;
 	iface.send_sock = dgram.createSocket({ type: 'udp4' });
-        iface.broadcast = IP.subnet(ip, netmask).broadcastAddress;
+        iface.broadcast = getBroadcastAddress(ip, netmask);
 	iface.send_sock.on('error', (err) => {
 //	    this.logger.log(`server error ${ip}`, err);
 	    iface.send_sock.close();
